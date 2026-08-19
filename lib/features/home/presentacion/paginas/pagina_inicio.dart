@@ -28,7 +28,7 @@ class _PaginaInicioState extends ConsumerState<PaginaInicio> {
     final tema = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: ColoresApp.secundario,
+      backgroundColor: ColoresApp.primario,
       body: Stack(
         children: [
           Positioned(
