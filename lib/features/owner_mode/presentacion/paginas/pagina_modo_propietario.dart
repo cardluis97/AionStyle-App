@@ -386,6 +386,17 @@ class _PaginaModoPropietarioState
     return lista;
   }
 
+  List<String> get _categoriasServiciosNegocio {
+    final categorias = <String>[];
+    for (final entrada in _serviciosSeleccionados.entries) {
+      if (entrada.value.isNotEmpty) {
+        categorias.add(entrada.key);
+      }
+    }
+    categorias.sort();
+    return categorias;
+  }
+
   List<String> get _resumenHorariosNegocio {
     final grupos = <String, List<String>>{};
     for (final dia in _horariosSemana) {
@@ -1957,7 +1968,7 @@ class _PaginaModoPropietarioState
   }
 
   Widget _vistaPreviaNegocio(ThemeData tema) {
-    final servicios = _itemsServiciosNegocio;
+    final servicios = _categoriasServiciosNegocio;
     final horarios = _resumenHorariosNegocio;
     final bytesPortada = _fotosBytes[0];
     final horarioTag = horarios.isEmpty
