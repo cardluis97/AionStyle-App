@@ -4,6 +4,7 @@ import '../../dominio/casos_de_uso/caso_uso_iniciar_sesion_google.dart';
 import '../../dominio/casos_de_uso/caso_uso_cerrar_sesion.dart';
 import '../../dominio/casos_de_uso/caso_uso_registrarse.dart';
 import '../../dominio/casos_de_uso/caso_uso_completar_perfil.dart';
+import '../../dominio/entidades/rol_usuario.dart';
 import '../../dominio/entidades/tipo_documento.dart';
 import 'estado_auth.dart';
 
@@ -98,5 +99,18 @@ class ViewModelAuth extends StateNotifier<EstadoAuth> {
   Future<void> cerrarSesion() async {
     await casoUsoCerrarSesion.ejecutar();
     state = const EstadoAuth.noAutenticado();
+  }
+
+  void activarRol(RolUsuario rol) {
+    state.maybeWhen(
+      autenticado: (usuario) {
+        if (!usuario.tieneRol(rol)) {
+          state = EstadoAuth.autenticado(
+            usuario.copyWith(roles: [...usuario.roles, rol]),
+          );
+        }
+      },
+      orElse: () {},
+    );
   }
 }

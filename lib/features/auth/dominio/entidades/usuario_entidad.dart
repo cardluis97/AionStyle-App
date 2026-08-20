@@ -38,6 +38,18 @@ class UsuarioEntidad extends Equatable {
   bool get esBarbero => tieneRol(RolUsuario.barbero);
   bool get esDueno => tieneRol(RolUsuario.dueno);
 
+  UsuarioEntidad copyWith({List<RolUsuario>? roles}) => UsuarioEntidad(
+        id: id,
+        nombreCompleto: nombreCompleto,
+        correo: correo,
+        telefono: telefono,
+        tipoDocumento: tipoDocumento,
+        numeroDocumento: numeroDocumento,
+        imagenPerfil: imagenPerfil,
+        roles: roles ?? this.roles,
+        proveedorAutenticacion: proveedorAutenticacion,
+      );
+
   @override
   List<Object?> get props => [
         id,

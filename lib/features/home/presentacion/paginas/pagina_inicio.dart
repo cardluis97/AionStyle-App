@@ -92,11 +92,7 @@ class _PaginaInicioState extends ConsumerState<PaginaInicio> {
                                     'usuarioa@aionstyle.com';
                             final tieneCitaPendiente =
                               esUsuarioDemoCliente && !_notificacionesLimpias;
-                            final rolPrincipal = esUsuarioDemoCliente
-                                ? 'Cliente'
-                                : (usuario.roles.isNotEmpty
-                                    ? _capitalizar(usuario.roles.first.nombre)
-                                    : 'Cliente');
+                            const rolPrincipal = 'Cliente';
 
                             return Row(
                               mainAxisAlignment: MainAxisAlignment.end,

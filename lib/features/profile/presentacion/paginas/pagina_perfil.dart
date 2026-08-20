@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/enrutador.dart';
 import '../../../../app/theme/colores.dart';
+import '../../../auth/dominio/entidades/usuario_entidad.dart';
 import '../../../auth/presentacion/proveedores/proveedores_auth.dart';
 
 class PaginaPerfil extends ConsumerWidget {
@@ -11,6 +12,13 @@ class PaginaPerfil extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final estadoAuth = ref.watch(viewModelAuthProvider);
+    final usuario = estadoAuth.maybeWhen<UsuarioEntidad?>(
+      autenticado: (valor) => valor,
+      perfilIncompleto: (valor) => valor,
+      orElse: () => null,
+    );
+
     return Scaffold(
       backgroundColor: ColoresApp.fondo,
       appBar: AppBar(
@@ -53,7 +61,7 @@ class PaginaPerfil extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Luis García',
+                                    usuario?.nombreCompleto ?? 'Cliente',
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
@@ -83,7 +91,7 @@ class PaginaPerfil extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'cliente@aionstyle.com',
+                              usuario?.correo ?? '',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -134,7 +142,19 @@ class PaginaPerfil extends ConsumerWidget {
                     titulo: 'INGRESAR COMO BARBERO',
                     subtitulo: 'Activa el modo de trabajo de barbero',
                     icono: Icons.content_cut_rounded,
-                    onTap: () => context.pushNamed(Rutas.nombreModoBarbero),
+                    onTap: () {
+                      if (usuario?.esBarbero == true) {
+                        context.pushNamed(Rutas.nombreModoBarbero);
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Este usuario no tiene habilitado el rol BARBERO.',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   _ItemPerfil(
                     titulo: 'INGRESAR COMO DUEÑO BARBERIA',

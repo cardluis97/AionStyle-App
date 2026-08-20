@@ -13,10 +13,10 @@ class NavegacionPrincipal extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final estadoAuth = ref.watch(viewModelAuthProvider);
-    final mostrarQr = estadoAuth.maybeWhen(
-      autenticado: (usuario) => usuario.correo.trim().toLowerCase() != 'usuarioa@aionstyle.com',
-      perfilIncompleto: (usuario) => usuario.correo.trim().toLowerCase() != 'usuarioa@aionstyle.com',
-      orElse: () => true,
+    final esDueno = estadoAuth.maybeWhen(
+      autenticado: (usuario) => usuario.esDueno,
+      perfilIncompleto: (usuario) => usuario.esDueno,
+      orElse: () => false,
     );
 
     final destinos = <NavigationDestination>[
@@ -30,11 +30,11 @@ class NavegacionPrincipal extends ConsumerWidget {
         selectedIcon: Icon(Icons.calendar_today),
         label: 'Citas',
       ),
-      if (mostrarQr)
+      if (esDueno)
         const NavigationDestination(
-          icon: Icon(Icons.qr_code_scanner),
-          selectedIcon: Icon(Icons.qr_code_scanner),
-          label: 'QR',
+          icon: Icon(Icons.storefront_outlined),
+          selectedIcon: Icon(Icons.storefront),
+          label: 'Mi negocio',
         ),
       const NavigationDestination(
         icon: Icon(Icons.person_outline),
@@ -46,28 +46,26 @@ class NavegacionPrincipal extends ConsumerWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _indiceActual(context, mostrarQr),
-        onDestinationSelected: (index) => _navegar(context, index, mostrarQr),
+        selectedIndex: _indiceActual(context, esDueno),
+        onDestinationSelected: (index) => _navegar(context, index, esDueno),
         destinations: destinos,
       ),
     );
   }
 
-  int _indiceActual(BuildContext context, bool mostrarQr) {
+  int _indiceActual(BuildContext context, bool esDueno) {
     final ubicacion = GoRouterState.of(context).uri.path;
     if (ubicacion.startsWith(Rutas.citas)) return 1;
-    if (ubicacion.startsWith(Rutas.qr)) {
-      return mostrarQr ? 2 : 0;
-    }
-    if (ubicacion.startsWith(Rutas.perfil)) return mostrarQr ? 3 : 2;
+    if (ubicacion.startsWith(Rutas.miNegocio)) return 2;
+    if (ubicacion.startsWith(Rutas.perfil)) return esDueno ? 3 : 2;
     return 0;
   }
 
-  void _navegar(BuildContext context, int index, bool mostrarQr) {
+  void _navegar(BuildContext context, int index, bool esDueno) {
     final rutas = <String>[
       Rutas.inicio,
       Rutas.citas,
-      if (mostrarQr) Rutas.qr,
+      if (esDueno) Rutas.miNegocio,
       Rutas.perfil,
     ];
 

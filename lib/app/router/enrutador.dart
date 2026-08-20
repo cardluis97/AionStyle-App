@@ -46,6 +46,7 @@ abstract class Rutas {
   static const configuracion = '/configuracion';
   static const modoBarbero = '/modo-barbero';
   static const modoPropietario = '/modo-propietario';
+  static const miNegocio = '/mi-negocio';
 
   static const nombreInicio = 'inicio';
   static const nombreCitas = 'citas';
@@ -59,6 +60,7 @@ abstract class Rutas {
   static const nombreQr = 'qr';
   static const nombreModoBarbero = 'modo-barbero';
   static const nombreModoPropietario = 'modo-propietario';
+  static const nombreMiNegocio = 'mi-negocio';
   static const nombreNegocios = 'negocios';
   static const nombreDetalleNegocio = 'detalle-negocio';
 }
@@ -208,6 +210,13 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
             path: Rutas.modoPropietario,
             name: Rutas.nombreModoPropietario,
             builder: (context, state) => const PaginaModoPropietario(),
+          ),
+          GoRoute(
+            path: Rutas.miNegocio,
+            name: Rutas.nombreMiNegocio,
+            builder: (context, state) => const PaginaModoPropietario(
+              esAlta: false,
+            ),
           ),
         ],
       ),
