@@ -91,4 +91,22 @@ flutter:
 
 flutter_launcher_icons:
   android: true
+  ios: true
+  image_path: assets/images/LogoPlayStore.png
   image_path_android: assets/images/LogoPlayStore.png
+  image_path_ios: assets/images/LogoPlayStore.png
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: assets/images/LogoPlayStore.png
+  web:
+    generate: true
+    image_path: assets/images/LogoPlayStore.png
+    background_color: "#000000"
+    theme_color: "#000000"
+  windows:
+    generate: true
+    image_path: assets/images/LogoPlayStore.png
+    icon_size: 256
+  macos:
+    generate: false
