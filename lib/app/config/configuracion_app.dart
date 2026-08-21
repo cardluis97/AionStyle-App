@@ -17,7 +17,7 @@ abstract class ConfiguracionApp {
   static const tiempoConexionMs = 30000;
   static const tiempoRecepcionMs = 30000;
   static const nombreApp = 'AionStyle';
-  static const versionApp = '1.0.3';
+  static const versionApp = '1.0.4';
 
   // Stripe
   static const stripePublicKeyDev = 'pk_test_XXXXXXXXXXXXXXXXXXXXXXXX';
