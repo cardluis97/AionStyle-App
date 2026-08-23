@@ -21,6 +21,9 @@ import '../../features/qr/presentacion/paginas/pagina_qr.dart';
 import '../../features/settings/presentacion/paginas/pagina_configuracion.dart';
 import '../../features/barber_mode/presentacion/paginas/pagina_modo_barbero.dart';
 import '../../features/owner_mode/presentacion/paginas/pagina_modo_propietario.dart';
+import '../../features/owner_mode/presentacion/paginas/pagina_firma_contrato_dueno.dart';
+import '../../features/owner_mode/presentacion/paginas/pagina_reporte_ventas.dart';
+import '../../features/owner_mode/presentacion/paginas/pagina_calendario_negocio.dart';
 import '../widgets/navegacion_principal.dart';
 
 // Rutas nombradas
@@ -47,6 +50,9 @@ abstract class Rutas {
   static const modoBarbero = '/modo-barbero';
   static const modoPropietario = '/modo-propietario';
   static const miNegocio = '/mi-negocio';
+  static const reporteVentas = '/reporte-ventas';
+  static const calendarioNegocio = '/calendario-negocio';
+  static const firmaContratoDueno = '/firma-contrato-dueno';
 
   static const nombreInicio = 'inicio';
   static const nombreCitas = 'citas';
@@ -61,6 +67,9 @@ abstract class Rutas {
   static const nombreModoBarbero = 'modo-barbero';
   static const nombreModoPropietario = 'modo-propietario';
   static const nombreMiNegocio = 'mi-negocio';
+  static const nombreReporteVentas = 'reporte-ventas';
+  static const nombreCalendarioNegocio = 'calendario-negocio';
+  static const nombreFirmaContratoDueno = 'firma-contrato-dueno';
   static const nombreNegocios = 'negocios';
   static const nombreDetalleNegocio = 'detalle-negocio';
 }
@@ -82,6 +91,11 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
         path: Rutas.completarPerfil,
         builder: (context, state) => const PaginaCompletarPerfil(),
       ),
+      GoRoute(
+        path: Rutas.firmaContratoDueno,
+        name: Rutas.nombreFirmaContratoDueno,
+        builder: (context, state) => const PaginaFirmaContratoDueno(),
+      ),
       ShellRoute(
         builder: (context, state, child) => NavegacionPrincipal(child: child),
         routes: [
@@ -99,6 +113,7 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
                 negocioNombre: p['negocio'],
                 barberoNombre: p['barbero'],
                 corte: p['corte'],
+                servicios: p['servicios'],
                 precio: double.tryParse(p['precio'] ?? ''),
                 fecha: p['fecha'],
                 hora: p['hora'],
@@ -112,15 +127,21 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final negocio = state.uri.queryParameters['negocio'] ?? 'Negocio';
               final barbero = state.uri.queryParameters['barbero'] ?? 'Barbero';
-              final especialidadesCadena =
+              final serviciosCadena = state.uri.queryParameters['servicios'] ?? '';
+              final estilosCadena =
+                  state.uri.queryParameters['estilos'] ??
                   state.uri.queryParameters['especialidades'] ?? '';
-              final especialidades = especialidadesCadena.isEmpty
+              final servicios = serviciosCadena.isEmpty
                   ? <String>[]
-                  : especialidadesCadena.split('|');
+                  : serviciosCadena.split('|');
+              final estilos = estilosCadena.isEmpty
+                  ? <String>[]
+                  : estilosCadena.split('|');
               return PaginaAgendarCita(
                 negocioNombre: negocio,
                 barberoNombre: barbero,
-                especialidades: especialidades,
+                serviciosDisponibles: servicios,
+                estilosDisponibles: estilos,
               );
             },
           ),
@@ -133,6 +154,7 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
                 negocioNombre: p['negocio'] ?? 'Negocio',
                 barberoNombre: p['barbero'] ?? 'Barbero',
                 corte: p['corte'] ?? 'Corte',
+                servicios: p['servicios'] ?? '',
                 precio: precio,
                 fecha: p['fecha'] ?? 'Sin fecha',
                 hora: p['hora'] ?? 'Sin hora',
@@ -217,6 +239,16 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const PaginaModoPropietario(
               esAlta: false,
             ),
+          ),
+          GoRoute(
+            path: Rutas.reporteVentas,
+            name: Rutas.nombreReporteVentas,
+            builder: (context, state) => const PaginaReporteVentas(),
+          ),
+          GoRoute(
+            path: Rutas.calendarioNegocio,
+            name: Rutas.nombreCalendarioNegocio,
+            builder: (context, state) => const PaginaCalendarioNegocio(),
           ),
         ],
       ),

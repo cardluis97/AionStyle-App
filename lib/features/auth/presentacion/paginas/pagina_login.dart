@@ -75,13 +75,13 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
 
     ref.listen<EstadoAuth>(viewModelAuthProvider, (_, siguiente) {
       siguiente.maybeWhen(
-        autenticado: (_) async {
+        autenticado: (usuario) async {
           if (_redirigiendoInicio) return;
           _redirigiendoInicio = true;
           final permitido = await exigirUbicacionAntesDeInicio(context);
           if (!mounted) return;
           if (permitido) {
-            context.go(Rutas.inicio);
+            context.go(usuario.esDueno ? Rutas.miNegocio : Rutas.inicio);
           }
           _redirigiendoInicio = false;
         },

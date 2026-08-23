@@ -15,6 +15,7 @@ class PaginaConfirmacionCita extends ConsumerStatefulWidget {
     required this.negocioNombre,
     required this.barberoNombre,
     required this.corte,
+    required this.servicios,
     required this.precio,
     required this.fecha,
     required this.hora,
@@ -25,6 +26,7 @@ class PaginaConfirmacionCita extends ConsumerStatefulWidget {
   final String negocioNombre;
   final String barberoNombre;
   final String corte;
+  final String servicios;
   final double precio;
   final String fecha;
   final String hora;
@@ -40,7 +42,7 @@ class _PaginaConfirmacionCitaState extends ConsumerState<PaginaConfirmacionCita>
   int _segundos = 15;
 
   String get _rutaCitasConDatos {
-    return '${Rutas.citas}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(widget.corte)}&precio=${widget.precio.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(widget.fecha)}&hora=${Uri.encodeComponent(widget.hora)}&pago=${Uri.encodeComponent(widget.metodoPago)}&qr=${Uri.encodeComponent(widget.codigoQr)}';
+    return '${Rutas.citas}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(widget.corte)}&servicios=${Uri.encodeComponent(widget.servicios)}&precio=${widget.precio.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(widget.fecha)}&hora=${Uri.encodeComponent(widget.hora)}&pago=${Uri.encodeComponent(widget.metodoPago)}&qr=${Uri.encodeComponent(widget.codigoQr)}';
   }
 
   @override
@@ -85,6 +87,7 @@ class _PaginaConfirmacionCitaState extends ConsumerState<PaginaConfirmacionCita>
             negocioNombre: widget.negocioNombre,
             barberoNombre: widget.barberoNombre,
             corte: widget.corte,
+            servicios: widget.servicios,
             precio: widget.precio,
             fecha: widget.fecha,
             hora: widget.hora,

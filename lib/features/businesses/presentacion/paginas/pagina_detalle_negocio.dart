@@ -263,7 +263,7 @@ class _TarjetaBarberoDetalle extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       context.push(
-                        '${Rutas.agendarCita}?negocio=${Uri.encodeComponent(negocio.nombre)}&barbero=${Uri.encodeComponent(barbero.nombre)}&especialidades=${Uri.encodeComponent(barbero.especialidades.join('|'))}',
+                        '${Rutas.agendarCita}?negocio=${Uri.encodeComponent(negocio.nombre)}&barbero=${Uri.encodeComponent(barbero.nombre)}&servicios=${Uri.encodeComponent(negocio.servicios.join('|'))}&estilos=${Uri.encodeComponent(negocio.estilos.join('|'))}',
                       );
                     },
                     style: ElevatedButton.styleFrom(

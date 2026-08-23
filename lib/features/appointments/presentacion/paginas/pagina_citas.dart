@@ -14,6 +14,7 @@ class PaginaCitas extends ConsumerStatefulWidget {
     this.negocioNombre,
     this.barberoNombre,
     this.corte,
+    this.servicios,
     this.precio,
     this.fecha,
     this.hora,
@@ -24,6 +25,7 @@ class PaginaCitas extends ConsumerStatefulWidget {
   final String? negocioNombre;
   final String? barberoNombre;
   final String? corte;
+  final String? servicios;
   final double? precio;
   final String? fecha;
   final String? hora;
@@ -146,6 +148,7 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
           negocioNombre: widget.negocioNombre!,
           barberoNombre: widget.barberoNombre!,
           corte: widget.corte!,
+          servicios: widget.servicios,
           precio: widget.precio!,
           fecha: widget.fecha!,
           hora: widget.hora!,
@@ -158,6 +161,7 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         negocioNombre: 'Barberia Central',
         barberoNombre: 'Carlos Mendez',
         corte: 'Fade Clasico',
+        servicios: 'Corte clasico',
         precio: 18,
         fecha: '22/08/2026',
         hora: '10:30',
@@ -170,6 +174,7 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         negocioNombre: 'Salon Eclipse',
         barberoNombre: 'Andrea Ruiz',
         corte: 'Perfilado Premium',
+        servicios: 'Diseno de barba',
         precio: 24,
         fecha: '25/08/2026',
         hora: '16:00',
@@ -182,6 +187,7 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         negocioNombre: 'Studio Norte',
         barberoNombre: 'Luis Paredes',
         corte: 'Corte y barba',
+        servicios: 'Corte ejecutivo | Perfilado de barba',
         precio: 21,
         fecha: '11/08/2026',
         hora: '12:00',
@@ -254,6 +260,7 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
                     negocioNombre: cita.negocioNombre,
                     barberoNombre: cita.barberoNombre,
                     corte: cita.corte,
+                    servicios: cita.servicios,
                     precio: cita.precio,
                     fecha: cita.fecha,
                     hora: cita.hora,
@@ -524,6 +531,7 @@ class _CitaVista {
     required this.negocioNombre,
     required this.barberoNombre,
     required this.corte,
+    this.servicios,
     required this.precio,
     required this.fecha,
     required this.hora,
@@ -536,6 +544,7 @@ class _CitaVista {
   final String negocioNombre;
   final String barberoNombre;
   final String corte;
+  final String? servicios;
   final double precio;
   final String fecha;
   final String hora;

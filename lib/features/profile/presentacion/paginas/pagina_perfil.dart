@@ -18,6 +18,8 @@ class PaginaPerfil extends ConsumerWidget {
       perfilIncompleto: (valor) => valor,
       orElse: () => null,
     );
+    final tieneRolBarbero = usuario?.esBarbero == true;
+    final tieneRolDueno = usuario?.esDueno == true;
 
     return Scaffold(
       backgroundColor: ColoresApp.fondo,
@@ -139,12 +141,16 @@ class PaginaPerfil extends ConsumerWidget {
                 titulo: 'Acceso y roles',
                 items: [
                   _ItemPerfil(
-                    titulo: 'INGRESAR COMO BARBERO',
-                    subtitulo: 'Activa el modo de trabajo de barbero',
+                    titulo: tieneRolBarbero
+                        ? 'INGRESAR COMO CLIENTE'
+                        : 'INGRESAR COMO BARBERO',
+                    subtitulo: tieneRolBarbero
+                        ? 'Cambia al flujo de cliente'
+                        : 'Activa el modo de trabajo de barbero',
                     icono: Icons.content_cut_rounded,
                     onTap: () {
-                      if (usuario?.esBarbero == true) {
-                        context.pushNamed(Rutas.nombreModoBarbero);
+                      if (tieneRolBarbero) {
+                        context.go(Rutas.inicio);
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -157,10 +163,28 @@ class PaginaPerfil extends ConsumerWidget {
                     },
                   ),
                   _ItemPerfil(
-                    titulo: 'INGRESAR COMO DUEÑO BARBERIA',
-                    subtitulo: 'Gestiona tu negocio y sucursales',
+                    titulo: tieneRolBarbero
+                        ? 'INGRESAR COMO DUEÑO BARBERIA'
+                        : tieneRolDueno
+                        ? 'INGRESAR COMO CLIENTE'
+                        : 'INGRESAR COMO DUEÑO BARBERIA',
+                    subtitulo: tieneRolBarbero
+                        ? 'Gestiona tu negocio y sucursales'
+                        : tieneRolDueno
+                        ? 'Cambia al flujo de cliente'
+                        : 'Gestiona tu negocio y sucursales',
                     icono: Icons.storefront_outlined,
-                    onTap: () => context.pushNamed(Rutas.nombreModoPropietario),
+                    onTap: () {
+                      if (tieneRolBarbero) {
+                        context.pushNamed(Rutas.nombreModoPropietario);
+                        return;
+                      }
+                      if (tieneRolDueno) {
+                        context.go(Rutas.inicio);
+                        return;
+                      }
+                      context.pushNamed(Rutas.nombreModoPropietario);
+                    },
                   ),
                 ],
               ),

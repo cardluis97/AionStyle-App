@@ -12,12 +12,14 @@ class PaginaAgendarCita extends StatefulWidget {
     super.key,
     required this.negocioNombre,
     required this.barberoNombre,
-    required this.especialidades,
+    required this.serviciosDisponibles,
+    required this.estilosDisponibles,
   });
 
   final String negocioNombre;
   final String barberoNombre;
-  final List<String> especialidades;
+  final List<String> serviciosDisponibles;
+  final List<String> estilosDisponibles;
 
   @override
   State<PaginaAgendarCita> createState() => _PaginaAgendarCitaState();
@@ -40,7 +42,8 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
   DateTime? _fechaSeleccionada;
   TimeOfDay? _horaSeleccionada;
   MetodoPagoCita _metodoPago = MetodoPagoCita.efectivo;
-  String? _corteSeleccionado;
+  String? _estiloSeleccionado;
+  final Set<String> _serviciosSeleccionados = <String>{};
   int? _indiceTarjetaSeleccionada = 0;
   bool _mostrarFormularioTarjeta = false;
 
@@ -53,8 +56,10 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
     super.dispose();
   }
 
-  bool get _corteCompleto =>
-      _corteSeleccionado != null && _corteSeleccionado!.isNotEmpty;
+    bool get _serviciosCompletos => _serviciosSeleccionados.isNotEmpty;
+
+    bool get _estiloCompleto =>
+      _estiloSeleccionado != null && _estiloSeleccionado!.isNotEmpty;
 
   bool get _fechaCompleta => _fechaSeleccionada != null;
 
@@ -80,18 +85,57 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
     return _tarjetasGuardadas[_indiceTarjetaSeleccionada!];
   }
 
-  Map<String, double> get _cortesConPrecio {
+  Map<String, List<String>> get _estilosPorServicio {
+    final mapa = <String, List<String>>{};
+    final servicios = widget.serviciosDisponibles;
+    final estilos = widget.estilosDisponibles;
+    if (servicios.isEmpty || estilos.isEmpty) {
+      return mapa;
+    }
+
+    final cantidadServicios = servicios.length;
+    final cantidadEstilos = estilos.length;
+    for (var i = 0; i < cantidadServicios; i++) {
+      final servicio = servicios[i];
+      final estilosServicio = <String>{};
+      for (var j = 0; j < cantidadEstilos; j++) {
+        final estilo = estilos[j];
+        if ((j % cantidadServicios) == i) {
+          estilosServicio.add(estilo);
+        }
+      }
+      if (estilosServicio.isEmpty) {
+        estilosServicio.add(estilos[i % cantidadEstilos]);
+      }
+      mapa[servicio] = estilosServicio.toList();
+    }
+    return mapa;
+  }
+
+  List<String> get _estilosFiltrados {
+    if (_serviciosSeleccionados.isEmpty) {
+      return const <String>[];
+    }
+    final estilos = <String>{};
+    for (final servicio in _serviciosSeleccionados) {
+      estilos.addAll(_estilosPorServicio[servicio] ?? const <String>[]);
+    }
+    final lista = estilos.toList()..sort();
+    return lista;
+  }
+
+  Map<String, double> get _estilosConPrecio {
     final mapa = <String, double>{};
-    for (var i = 0; i < widget.especialidades.length; i++) {
-      final corte = widget.especialidades[i];
-      mapa[corte] = 12 + (i * 4.5);
+    for (var i = 0; i < widget.estilosDisponibles.length; i++) {
+      final estilo = widget.estilosDisponibles[i];
+      mapa[estilo] = 12 + (i * 4.5);
     }
     return mapa;
   }
 
   double get _precioSeleccionado {
-    if (_corteSeleccionado == null) return 0;
-    return _cortesConPrecio[_corteSeleccionado] ?? 0;
+    if (_estiloSeleccionado == null) return 0;
+    return _estilosConPrecio[_estiloSeleccionado] ?? 0;
   }
 
   String get _fechaTexto {
@@ -257,9 +301,16 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
       return;
     }
 
-    if (_corteSeleccionado == null) {
+    if (_serviciosSeleccionados.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona el corte del cliente.')),
+        const SnackBar(content: Text('Selecciona al menos un servicio.')),
+      );
+      return;
+    }
+
+    if (_estiloSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona el estilo del cliente.')),
       );
       return;
     }
@@ -274,11 +325,12 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
     }
 
     final marca = DateTime.now().millisecondsSinceEpoch.toString();
+    final serviciosTexto = _serviciosSeleccionados.toList()..sort();
     final codigoQr =
-        'AIONSTYLE|$marca|${widget.negocioNombre}|${widget.barberoNombre}|${_corteSeleccionado!}|$_fechaTexto|$_horaTexto|${_precioSeleccionado.toStringAsFixed(2)}';
+        'AIONSTYLE|$marca|${widget.negocioNombre}|${widget.barberoNombre}|${serviciosTexto.join(', ')}|${_estiloSeleccionado!}|$_fechaTexto|$_horaTexto|${_precioSeleccionado.toStringAsFixed(2)}';
 
     context.pushReplacement(
-      '${Rutas.confirmacionCita}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(_corteSeleccionado!)}&precio=${_precioSeleccionado.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(_fechaTexto)}&hora=${Uri.encodeComponent(_horaTexto)}&pago=${Uri.encodeComponent(_metodoPagoTexto)}&qr=${Uri.encodeComponent(codigoQr)}',
+      '${Rutas.confirmacionCita}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(_estiloSeleccionado!)}&servicios=${Uri.encodeComponent(serviciosTexto.join(' | '))}&precio=${_precioSeleccionado.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(_fechaTexto)}&hora=${Uri.encodeComponent(_horaTexto)}&pago=${Uri.encodeComponent(_metodoPagoTexto)}&qr=${Uri.encodeComponent(codigoQr)}',
     );
   }
 
@@ -372,21 +424,95 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
             const SizedBox(height: 16),
             _itemAcordeon(
               indice: 0,
-              titulo: 'Corte del cliente',
-              completo: _corteCompleto,
+              titulo: 'Servicio y estilo',
+              completo: _serviciosCompletos && _estiloCompleto,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Selecciona uno o varios servicios',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: ColoresApp.secundario,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (widget.serviciosDisponibles.isEmpty)
+                    Text(
+                      'No hay servicios disponibles para este negocio.',
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: ColoresApp.secundario.withValues(alpha: 0.8),
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: widget.serviciosDisponibles.map((servicio) {
+                        final activo = _serviciosSeleccionados.contains(servicio);
+                        return FilterChip(
+                          selected: activo,
+                          showCheckmark: false,
+                          selectedColor: ColoresApp.secundario,
+                          backgroundColor: ColoresApp.secundario.withValues(alpha: 0.12),
+                          side: BorderSide(
+                            color: activo
+                                ? ColoresApp.secundario
+                                : ColoresApp.secundario.withValues(alpha: 0.35),
+                          ),
+                          label: Text(
+                            servicio,
+                            style: tema.textTheme.bodySmall?.copyWith(
+                              color: activo ? ColoresApp.primario : ColoresApp.secundario,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onSelected: (valor) {
+                            setState(() {
+                              if (valor) {
+                                _serviciosSeleccionados.add(servicio);
+                              } else {
+                                _serviciosSeleccionados.remove(servicio);
+                              }
+                              if (_estiloSeleccionado != null &&
+                                  !_estilosFiltrados.contains(_estiloSeleccionado)) {
+                                _estiloSeleccionado = null;
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Estilo disponible segun servicio seleccionado',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: ColoresApp.secundario,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: _corteSeleccionado,
+                    initialValue: _estiloSeleccionado,
                     isExpanded: true,
+                    onTap: _serviciosSeleccionados.isEmpty
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Selecciona primero uno o varios servicios.'),
+                              ),
+                            );
+                          }
+                        : null,
                     style: tema.textTheme.bodyMedium?.copyWith(
                       color: ColoresApp.secundario,
                     ),
                     dropdownColor: ColoresApp.primario,
                     iconEnabledColor: ColoresApp.secundario,
                     decoration: InputDecoration(
-                      hintText: 'Selecciona un corte',
+                      hintText: _serviciosSeleccionados.isEmpty
+                          ? 'Primero selecciona servicio'
+                          : 'Selecciona un estilo',
                       filled: true,
                       fillColor: ColoresApp.secundario.withValues(alpha: 0.10),
                       hintStyle: tema.textTheme.bodySmall?.copyWith(
@@ -411,22 +537,24 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
                         ),
                       ),
                     ),
-                    items: _cortesConPrecio.entries.map((entrada) {
+                    items: _estilosFiltrados.map((estilo) {
+                      final precio = _estilosConPrecio[estilo] ?? 0;
                       return DropdownMenuItem<String>(
-                        value: entrada.key,
+                        value: estilo,
                         child: Text(
-                          '${entrada.key} - USD ${entrada.value.toStringAsFixed(2)}',
+                          '$estilo - USD ${precio.toStringAsFixed(2)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       );
                     }).toList(),
                     selectedItemBuilder: (context) {
-                      return _cortesConPrecio.entries.map((entrada) {
+                      return _estilosFiltrados.map((estilo) {
+                        final precio = _estilosConPrecio[estilo] ?? 0;
                         return Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '${entrada.key} - USD ${entrada.value.toStringAsFixed(2)}',
+                            '$estilo - USD ${precio.toStringAsFixed(2)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -435,12 +563,15 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
                     },
                     onChanged: (valor) {
                       setState(() {
-                        _corteSeleccionado = valor;
+                        _estiloSeleccionado = valor;
                       });
                     },
                     validator: (valor) {
+                      if (_serviciosSeleccionados.isEmpty) {
+                        return 'Selecciona al menos un servicio';
+                      }
                       if (valor == null || valor.isEmpty) {
-                        return 'Selecciona un corte';
+                        return 'Selecciona un estilo';
                       }
                       return null;
                     },
@@ -860,10 +991,16 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
                 children: [
                   _filaResumen('Negocio', widget.negocioNombre),
                   _filaResumen('Barbero', widget.barberoNombre),
-                  _filaResumen('Corte', _corteSeleccionado ?? 'Pendiente'),
+                  _filaResumen(
+                    'Servicio(s)',
+                    _serviciosSeleccionados.isEmpty
+                        ? 'Pendiente'
+                        : (_serviciosSeleccionados.toList()..sort()).join(', '),
+                  ),
+                  _filaResumen('Estilo', _estiloSeleccionado ?? 'Pendiente'),
                   _filaResumen(
                     'Precio',
-                    _corteSeleccionado == null
+                    _estiloSeleccionado == null
                         ? 'Pendiente'
                         : 'USD ${_precioSeleccionado.toStringAsFixed(2)}',
                   ),

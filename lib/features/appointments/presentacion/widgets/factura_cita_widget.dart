@@ -10,6 +10,7 @@ class FacturaCitaWidget extends StatelessWidget {
     required this.negocioNombre,
     required this.barberoNombre,
     required this.corte,
+    this.servicios,
     required this.precio,
     required this.fecha,
     required this.hora,
@@ -21,6 +22,7 @@ class FacturaCitaWidget extends StatelessWidget {
   final String negocioNombre;
   final String barberoNombre;
   final String corte;
+  final String? servicios;
   final double precio;
   final String fecha;
   final String hora;
@@ -71,6 +73,8 @@ class FacturaCitaWidget extends StatelessWidget {
           _linea('Cliente', clienteNombre),
           _linea('Negocio', negocioNombre),
           _linea('Barbero', barberoNombre),
+          if (servicios != null && servicios!.trim().isNotEmpty)
+            _linea('Servicios', servicios!),
           _linea('Corte', corte),
           _linea('Fecha', fecha),
           _linea('Hora', hora),

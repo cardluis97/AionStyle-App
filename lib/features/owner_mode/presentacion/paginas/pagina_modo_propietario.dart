@@ -11,6 +11,7 @@ import '../../../../app/router/enrutador.dart';
 import '../../../../app/theme/colores.dart';
 import '../../../auth/dominio/entidades/rol_usuario.dart';
 import '../../../auth/presentacion/proveedores/proveedores_auth.dart';
+import 'pagina_firma_contrato_dueno.dart';
 
 class PaginaModoPropietario extends ConsumerStatefulWidget {
   const PaginaModoPropietario({super.key, this.esAlta = true});
@@ -29,6 +30,7 @@ class _PaginaModoPropietarioState
   final _telefonoNegocio = TextEditingController();
   final _departamento = TextEditingController();
   final _municipio = TextEditingController();
+  final _colonia = TextEditingController();
   final _direccion = TextEditingController();
   final _cuenta = TextEditingController();
   final _nombreDueno = TextEditingController();
@@ -60,10 +62,12 @@ class _PaginaModoPropietarioState
   int _cantidadSucursales = 1;
   String _codigoPaisNegocio = '+504';
   _TipoNegocio? _tipoNegocio;
+  bool _modoEdicionMiNegocio = false;
 
   @override
   void initState() {
     super.initState();
+    _modoEdicionMiNegocio = widget.esAlta;
     final estadoAuth = ref.read(viewModelAuthProvider);
     estadoAuth.maybeWhen(
           autenticado: (usuario) {
@@ -83,13 +87,17 @@ class _PaginaModoPropietarioState
         if (mounted) context.go(Rutas.perfil);
       });
     }
+
+    if (!widget.esAlta) {
+      _cargarDatosDemoMiNegocio();
+    }
   }
 
   @override
   void dispose() {
     for (final controlador in [
       _nombreNegocio, _telefonoNegocio, _departamento,
-      _municipio, _direccion, _cuenta,
+      _municipio, _colonia, _direccion, _cuenta,
       _nombreDueno, _emailDueno, _celularDueno, _dniDueno,
     ]) {
       controlador.dispose();
@@ -104,6 +112,71 @@ class _PaginaModoPropietarioState
     }
     _controladorFotos.dispose();
     super.dispose();
+  }
+
+  void _cargarDatosDemoMiNegocio() {
+    if (_nombreNegocio.text.trim().isNotEmpty) return;
+
+    _nombreNegocio.text = 'Barberia Central Norte';
+    _telefonoNegocio.text = '9988-7766';
+    _departamento.text = 'Francisco Morazan';
+    _municipio.text = 'Distrito Central';
+    _colonia.text = 'Colonia Palmira';
+    _direccion.text = 'Boulevard Morazan, local 12';
+    _cuenta.text = 'BAC 001-778899-22';
+    _cantidadSucursales = 2;
+    _codigoPaisNegocio = '+504';
+    _tipoNegocio = _TipoNegocio.barberia;
+
+    for (final dia in _horariosSemana) {
+      if (dia.nombreDia == 'Domingo') {
+        dia.cerrado = true;
+        dia.apertura = null;
+        dia.cierre = null;
+      } else {
+        dia.cerrado = false;
+        dia.apertura = const TimeOfDay(hour: 9, minute: 0);
+        dia.cierre = const TimeOfDay(hour: 19, minute: 0);
+      }
+    }
+
+    _serviciosSeleccionados
+      ..clear()
+      ..addAll({
+        'Corte de cabello': {'Corte clasico', 'Fade / Degradado'},
+        'Barba': {'Perfilado de barba'},
+      });
+
+    for (final categoria in _preciosServicios.values) {
+      for (final controlador in categoria.values) {
+        controlador.dispose();
+      }
+    }
+    _preciosServicios
+      ..clear()
+      ..addAll({
+        'Corte de cabello': {
+          'Corte clasico': TextEditingController(text: '120'),
+          'Fade / Degradado': TextEditingController(text: '180'),
+        },
+        'Barba': {
+          'Perfilado de barba': TextEditingController(text: '90'),
+        },
+      });
+
+    if (_personal.isEmpty) {
+      _personal.add(_PersonalFormulario());
+    }
+
+    final persona = _personal.first;
+    persona.nombre.text = 'Jose Aguilar';
+    persona.experiencia.text = '6';
+    persona.correo.text = 'jose.aguilar@aionstyle.com';
+    persona.dni.text = '0801199912345';
+    persona.serviciosSeleccionados = {'Corte clasico', 'Fade / Degradado'};
+    persona.diasTrabajo = {'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'};
+    persona.horaEntrada = const TimeOfDay(hour: 9, minute: 0);
+    persona.horaSalida = const TimeOfDay(hour: 18, minute: 0);
   }
 
   Future<void> _abrirSelectorPaisNegocio() async {
@@ -332,6 +405,7 @@ class _PaginaModoPropietarioState
         _esTextoValido(_telefonoNegocio) &&
         _esTextoValido(_departamento) &&
         _esTextoValido(_municipio) &&
+      _esTextoValido(_colonia) &&
         _esTextoValido(_direccion) &&
         _tipoNegocio != null &&
         _validarHorarios();
@@ -412,6 +486,17 @@ class _PaginaModoPropietarioState
       resumen.add('$dias: ${entrada.key}');
     }
     return resumen;
+  }
+
+  String get _ubicacionNegocioVistaPrevia {
+    final colonia = _colonia.text.trim();
+    final direccion = _direccion.text.trim();
+    if (colonia.isEmpty && direccion.isEmpty) {
+      return 'Colonia y direccion exacta';
+    }
+    if (colonia.isEmpty) return direccion;
+    if (direccion.isEmpty) return colonia;
+    return '$colonia, $direccion';
   }
 
   String _resumirDiasConsecutivos(List<String> dias) {
@@ -626,7 +711,7 @@ class _PaginaModoPropietarioState
       );
       return;
     }
-    if (!_datosDuenoCompletos) {
+    if (widget.esAlta && !_datosDuenoCompletos) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -646,16 +731,27 @@ class _PaginaModoPropietarioState
       );
       return;
     }
-    if (_fotos.any((foto) => foto == null)) {
+    if (widget.esAlta && _fotos.any((foto) => foto == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Adjunta las 3 fotos del negocio.')),
       );
       return;
     }
+    if (widget.esAlta) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const PaginaFirmaContratoDueno(),
+        ),
+      );
+      return;
+    }
     ref.read(viewModelAuthProvider.notifier).activarRol(RolUsuario.dueno);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tu negocio fue registrado correctamente.')),
+      const SnackBar(content: Text('Cambios guardados correctamente.')),
     );
+    setState(() {
+      _modoEdicionMiNegocio = false;
+    });
     context.go(Rutas.miNegocio);
   }
 
@@ -667,12 +763,88 @@ class _PaginaModoPropietarioState
         ? <String, List<String>>{}
         : _catalogoServicios[_tipoNegocio!]!;
 
+    if (!widget.esAlta && !_modoEdicionMiNegocio) {
+      return Scaffold(
+        backgroundColor: ColoresApp.fondo,
+        appBar: AppBar(
+          title: Text(titulo),
+          backgroundColor: ColoresApp.primario,
+          foregroundColor: ColoresApp.secundario,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(18),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ColoresApp.primario,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vista previa bloqueada',
+                    style: tema.textTheme.titleMedium?.copyWith(
+                      color: ColoresApp.secundario,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Revisa la informacion de tu negocio. Presiona Editar para habilitar cambios en datos, servicios, fotos y personal a cargo.',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: ColoresApp.secundario.withValues(alpha: 0.88),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _modoEdicionMiNegocio = true;
+                        _panelActivo = 0;
+                      });
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Editar mi negocio'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ColoresApp.secundario,
+                      foregroundColor: ColoresApp.primario,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _resumenVistaBloqueada(tema),
+            const SizedBox(height: 12),
+            _vistaPreviaNegocio(tema),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: ColoresApp.fondo,
       appBar: AppBar(
         title: Text(titulo),
         backgroundColor: ColoresApp.primario,
         foregroundColor: ColoresApp.secundario,
+        actions: [
+          if (!widget.esAlta)
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _modoEdicionMiNegocio = false;
+                });
+              },
+              icon: const Icon(Icons.visibility_outlined, size: 18),
+              label: const Text('Vista previa'),
+              style: TextButton.styleFrom(
+                foregroundColor: ColoresApp.secundario,
+              ),
+            ),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -757,7 +929,12 @@ class _PaginaModoPropietarioState
                   _campoAcordeon('Departamento negocio principal', _departamento),
                   _campoAcordeon('Municipio negocio principal', _municipio),
                   _campoAcordeon(
-                    'Colonia y direccion exacta del negocio',
+                    'Colonia',
+                    _colonia,
+                    icono: Icons.place_outlined,
+                  ),
+                  _campoAcordeon(
+                    'Direccion exacta del negocio',
                     _direccion,
                     maxLineas: 2,
                     icono: Icons.location_on_outlined,
@@ -989,96 +1166,105 @@ class _PaginaModoPropietarioState
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: mapaServicios.entries.map((entradaCategoria) {
-                        final categoria = entradaCategoria.key;
-                        final items = entradaCategoria.value;
-                        final seleccionados =
-                            _serviciosSeleccionados[categoria] ?? <String>{};
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          decoration: BoxDecoration(
-                            color: ColoresApp.secundario.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: ColoresApp.secundario.withValues(alpha: 0.25),
-                            ),
+                      children: [
+                        Text(
+                          'Selecciona primero el servicio (categoria) y luego el estilo que ofrece tu negocio.',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: ColoresApp.secundario.withValues(alpha: 0.8),
                           ),
-                          child: ExpansionTile(
-                            collapsedIconColor: ColoresApp.secundario,
-                            iconColor: ColoresApp.secundario,
-                            shape: const Border(),
-                            collapsedShape: const Border(),
-                            title: Text(
-                              categoria,
-                              style: tema.textTheme.labelLarge?.copyWith(
-                                color: ColoresApp.secundario,
-                                fontWeight: FontWeight.w700,
+                        ),
+                        const SizedBox(height: 8),
+                        ...mapaServicios.entries.map((entradaCategoria) {
+                          final categoria = entradaCategoria.key;
+                          final items = entradaCategoria.value;
+                          final seleccionados =
+                              _serviciosSeleccionados[categoria] ?? <String>{};
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: ColoresApp.secundario.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: ColoresApp.secundario.withValues(alpha: 0.25),
                               ),
                             ),
-                            subtitle: Text(
-                              '${seleccionados.length} seleccionados',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: ColoresApp.secundario.withValues(alpha: 0.78),
-                              ),
-                            ),
-                            children: items.map((item) {
-                              final estaSeleccionado = seleccionados.contains(item);
-                              final controladorPrecio = _preciosServicios[categoria]?[item];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Column(
-                                  children: [
-                                    CheckboxListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      checkColor: ColoresApp.primario,
-                                      activeColor: ColoresApp.secundario,
-                                      title: Text(
-                                        item,
-                                        style: tema.textTheme.bodyMedium?.copyWith(
-                                          color: ColoresApp.secundario,
-                                        ),
-                                      ),
-                                      value: estaSeleccionado,
-                                      onChanged: (valor) => _onToggleServicio(
-                                        categoria,
-                                        item,
-                                        valor ?? false,
-                                      ),
-                                    ),
-                                    if (estaSeleccionado && controladorPrecio != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          left: 10,
-                                          right: 10,
-                                          bottom: 10,
-                                        ),
-                                        child: TextFormField(
-                                          controller: controladorPrecio,
-                                          keyboardType: const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                          style: _textoClaro(tema),
-                                          decoration: _decoracionAcordeon(
-                                            tema,
-                                            etiqueta: 'Precio (L)',
-                                            hintTexto: 'Precio de "$item"',
-                                            icono: null,
-                                            prefijoTexto: 'L ',
-                                          ),
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter.allow(
-                                              RegExp(r'[0-9.]'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
+                            child: ExpansionTile(
+                              collapsedIconColor: ColoresApp.secundario,
+                              iconColor: ColoresApp.secundario,
+                              shape: const Border(),
+                              collapsedShape: const Border(),
+                              title: Text(
+                                categoria,
+                                style: tema.textTheme.labelLarge?.copyWith(
+                                  color: ColoresApp.secundario,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        );
-                      }).toList(),
+                              ),
+                              subtitle: Text(
+                                '${seleccionados.length} estilos seleccionados',
+                                style: tema.textTheme.bodySmall?.copyWith(
+                                  color: ColoresApp.secundario.withValues(alpha: 0.78),
+                                ),
+                              ),
+                              children: items.map((item) {
+                                final estaSeleccionado = seleccionados.contains(item);
+                                final controladorPrecio = _preciosServicios[categoria]?[item];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: Column(
+                                    children: [
+                                      CheckboxListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        checkColor: ColoresApp.primario,
+                                        activeColor: ColoresApp.secundario,
+                                        title: Text(
+                                          item,
+                                          style: tema.textTheme.bodyMedium?.copyWith(
+                                            color: ColoresApp.secundario,
+                                          ),
+                                        ),
+                                        value: estaSeleccionado,
+                                        onChanged: (valor) => _onToggleServicio(
+                                          categoria,
+                                          item,
+                                          valor ?? false,
+                                        ),
+                                      ),
+                                      if (estaSeleccionado && controladorPrecio != null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 10,
+                                            right: 10,
+                                            bottom: 10,
+                                          ),
+                                          child: TextFormField(
+                                            controller: controladorPrecio,
+                                            keyboardType: const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                            style: _textoClaro(tema),
+                                            decoration: _decoracionAcordeon(
+                                              tema,
+                                              etiqueta: 'Precio (L)',
+                                              hintTexto: 'Precio de "$item"',
+                                              icono: null,
+                                              prefijoTexto: 'L ',
+                                            ),
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.allow(
+                                                RegExp(r'[0-9.]'),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        }).toList(),
+                      ],
                     ),
             ),
             _itemAcordeon(
@@ -2036,9 +2222,7 @@ class _PaginaModoPropietarioState
                         _tagInfoVistaPrevia(
                           icono: Icons.location_on_outlined,
                           etiqueta: 'Ubicacion',
-                          texto: _direccion.text.trim().isEmpty
-                              ? 'Colonia y direccion exacta'
-                              : _direccion.text.trim(),
+                          texto: _ubicacionNegocioVistaPrevia,
                         ),
                         const SizedBox(height: 6),
                         _tagInfoVistaPrevia(
@@ -2198,6 +2382,78 @@ class _PaginaModoPropietarioState
                     );
                   }),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _resumenVistaBloqueada(ThemeData tema) {
+    final totalFotos = _fotos.where((foto) => foto != null).length;
+    final servicios = _itemsServiciosNegocio;
+    final horarios = _resumenHorariosNegocio;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: ColoresApp.secundario,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Datos de Mi Negocio',
+            style: tema.textTheme.labelLarge?.copyWith(
+              color: ColoresApp.primario,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _filaVistaBloqueada('Telefono negocio', '$_codigoPaisNegocio ${_telefonoNegocio.text.trim()}'),
+          _filaVistaBloqueada('Sucursales', _cantidadSucursales.toString()),
+          _filaVistaBloqueada('Departamento', _departamento.text.trim()),
+          _filaVistaBloqueada('Municipio', _municipio.text.trim()),
+          _filaVistaBloqueada('Colonia', _colonia.text.trim()),
+          _filaVistaBloqueada('Cuenta bancaria', _cuenta.text.trim().isEmpty ? 'No registrada' : _cuenta.text.trim()),
+          _filaVistaBloqueada('Horario', horarios.isEmpty ? 'Sin definir' : horarios.join(' | ')),
+          _filaVistaBloqueada('Servicios disponibles', servicios.isEmpty ? 'Sin seleccionar' : servicios.join(', ')),
+          _filaVistaBloqueada('Fotos del negocio', '$totalFotos/3 cargadas'),
+          _filaVistaBloqueada('Correo del dueno', _emailDueno.text.trim()),
+          _filaVistaBloqueada('Celular del dueno', _celularDueno.text.trim()),
+          _filaVistaBloqueada('Personal a cargo', '${_personal.length} registrado(s)'),
+        ],
+      ),
+    );
+  }
+
+  Widget _filaVistaBloqueada(String etiqueta, String valor) {
+    final tema = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(
+              etiqueta,
+              style: tema.textTheme.bodySmall?.copyWith(
+                color: ColoresApp.textoClaro,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 7,
+            child: Text(
+              valor.isEmpty ? 'Pendiente' : valor,
+              style: tema.textTheme.bodySmall?.copyWith(
+                color: ColoresApp.primario,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

@@ -19,29 +19,46 @@ class NavegacionPrincipal extends ConsumerWidget {
       orElse: () => false,
     );
 
-    final destinos = <NavigationDestination>[
-      const NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home),
-        label: 'Inicio',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.calendar_today_outlined),
-        selectedIcon: Icon(Icons.calendar_today),
-        label: 'Citas',
-      ),
-      if (esDueno)
-        const NavigationDestination(
-          icon: Icon(Icons.storefront_outlined),
-          selectedIcon: Icon(Icons.storefront),
-          label: 'Mi negocio',
-        ),
-      const NavigationDestination(
-        icon: Icon(Icons.person_outline),
-        selectedIcon: Icon(Icons.person),
-        label: 'Perfil',
-      ),
-    ];
+    final destinos = esDueno
+        ? <NavigationDestination>[
+            const NavigationDestination(
+              icon: Icon(Icons.storefront_outlined),
+              selectedIcon: Icon(Icons.storefront),
+              label: 'Mi negocio',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.event_outlined),
+              selectedIcon: Icon(Icons.event),
+              label: 'Calendario',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(Icons.bar_chart),
+              label: 'Reportes',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Mi perfil',
+            ),
+          ]
+        : <NavigationDestination>[
+            const NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Inicio',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.calendar_today_outlined),
+              selectedIcon: Icon(Icons.calendar_today),
+              label: 'Citas',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Perfil',
+            ),
+          ];
 
     return Scaffold(
       body: child,
@@ -55,22 +72,30 @@ class NavegacionPrincipal extends ConsumerWidget {
 
   int _indiceActual(BuildContext context, bool esDueno) {
     final ubicacion = GoRouterState.of(context).uri.path;
+    if (esDueno) {
+      if (ubicacion.startsWith(Rutas.calendarioNegocio)) return 1;
+      if (ubicacion.startsWith(Rutas.reporteVentas)) return 2;
+      if (ubicacion.startsWith(Rutas.perfil)) return 3;
+      return 0;
+    }
     if (ubicacion.startsWith(Rutas.citas)) return 1;
     if (ubicacion.startsWith(Rutas.miNegocio)) return 2;
-    if (ubicacion.startsWith(Rutas.perfil)) return esDueno ? 3 : 2;
+    if (ubicacion.startsWith(Rutas.perfil)) return 2;
     return 0;
   }
 
   void _navegar(BuildContext context, int index, bool esDueno) {
-    final rutas = <String>[
-      Rutas.inicio,
-      Rutas.citas,
-      if (esDueno) Rutas.miNegocio,
-      Rutas.perfil,
-    ];
+    final rutas = esDueno
+        ? <String>[
+            Rutas.miNegocio,
+            Rutas.calendarioNegocio,
+            Rutas.reporteVentas,
+            Rutas.perfil,
+          ]
+        : <String>[Rutas.inicio, Rutas.citas, Rutas.perfil];
 
     if (index < 0 || index >= rutas.length) {
-      context.go(Rutas.inicio);
+      context.go(esDueno ? Rutas.miNegocio : Rutas.inicio);
       return;
     }
 
