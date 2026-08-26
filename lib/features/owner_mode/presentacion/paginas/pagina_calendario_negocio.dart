@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import '../../../../app/theme/colores.dart';
 
@@ -10,12 +11,8 @@ class PaginaCalendarioNegocio extends StatefulWidget {
 }
 
 class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
-  final _motivoCierreCtrl = TextEditingController();
-  final _promocionCtrl = TextEditingController();
-
-  final Set<DateTime> _diasSeleccionados = <DateTime>{};
-  final Map<DateTime, _ConfiguracionDiaNegocio> _agendaPorDia =
-      <DateTime, _ConfiguracionDiaNegocio>{};
+  final Map<DateTime, _ActividadEspecialDia> _agendaPorDia =
+      <DateTime, _ActividadEspecialDia>{};
 
   final List<String> _barberos = const [
     'Carlos Martinez',
@@ -24,120 +21,306 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
     'Miguel Torres',
   ];
 
-  DateTime _diaActivo = _normalizarFecha(DateTime.now());
-  bool _negocioCerrado = false;
-  final Set<String> _barberosNoDisponibles = <String>{};
+  DateTime _diaEnfoque = _normalizarFecha(DateTime.now());
+  DateTime? _inicioRango;
+  DateTime? _finRango;
 
-  @override
-  void initState() {
-    super.initState();
-    _diasSeleccionados.add(_diaActivo);
-    _cargarConfiguracionDelDia(_diaActivo);
-  }
-
-  @override
-  void dispose() {
-    _motivoCierreCtrl.dispose();
-    _promocionCtrl.dispose();
-    super.dispose();
-  }
-
-  void _cargarConfiguracionDelDia(DateTime dia) {
-    final config = _agendaPorDia[dia];
-    setState(() {
-      _negocioCerrado = config?.cerrado ?? false;
-      _motivoCierreCtrl.text = config?.motivoCierre ?? '';
-      _promocionCtrl.text = config?.promocion ?? '';
-      _barberosNoDisponibles
-        ..clear()
-        ..addAll(config?.barberosNoDisponibles ?? const <String>{});
-    });
-  }
-
-  Future<void> _seleccionarRangoDias() async {
-    final ahora = DateTime.now();
-    final rango = await showDateRangePicker(
-      context: context,
-      locale: const Locale('es', 'ES'),
-      firstDate: DateTime(ahora.year - 2),
-      lastDate: DateTime(ahora.year + 3, 12, 31),
-      initialDateRange: DateTimeRange(start: _diaActivo, end: _diaActivo),
-      helpText: 'Selecciona rango de dias',
-      saveText: 'Aplicar',
-    );
-
-    if (rango == null) return;
-
-    final dias = <DateTime>{};
-    var cursor = _normalizarFecha(rango.start);
-    final fin = _normalizarFecha(rango.end);
+  List<DateTime> get _diasSeleccionados {
+    if (_inicioRango == null) return <DateTime>[];
+    final inicio = _normalizarFecha(_inicioRango!);
+    final fin = _normalizarFecha(_finRango ?? _inicioRango!);
+    final dias = <DateTime>[];
+    var cursor = inicio;
     while (!cursor.isAfter(fin)) {
       dias.add(cursor);
       cursor = cursor.add(const Duration(days: 1));
     }
-
-    if (!mounted) return;
-    setState(() {
-      _diasSeleccionados
-        ..clear()
-        ..addAll(dias);
-      _diaActivo = _normalizarFecha(rango.start);
-    });
-    _cargarConfiguracionDelDia(_diaActivo);
+    return dias;
   }
 
-  void _guardarConfiguracion() {
-    final motivo = _motivoCierreCtrl.text.trim();
-    final promo = _promocionCtrl.text.trim();
+  Future<void> _onRangoSeleccionado(
+    DateTime? inicio,
+    DateTime? fin,
+    DateTime diaEnfoque,
+  ) async {
+    if (inicio == null) return;
 
-    if (_negocioCerrado && motivo.isEmpty) {
+    setState(() {
+      _inicioRango = _normalizarFecha(inicio);
+      _finRango = _normalizarFecha(fin ?? inicio);
+      _diaEnfoque = _normalizarFecha(diaEnfoque);
+    });
+
+    await _abrirModalAccionDias();
+  }
+
+  Future<void> _abrirModalAccionDias({DateTime? diaEdicion}) async {
+    final diasObjetivo = diaEdicion == null ? _diasSeleccionados : <DateTime>[diaEdicion];
+    if (diasObjetivo.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe el motivo del cierre.')),
+        const SnackBar(content: Text('Selecciona al menos un dia en el calendario.')),
       );
       return;
     }
 
-    if (_diasSeleccionados.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona al menos un dia para aplicar cambios.')),
-      );
-      return;
-    }
+    final base = _agendaPorDia[diasObjetivo.first];
+    var accion = base?.accion ?? _TipoAccionCalendario.cierreNegocio;
+    final barberosNoDisponibles =
+        Set<String>.from(base?.barberosNoDisponibles ?? <String>{});
 
-    final config = _ConfiguracionDiaNegocio(
-      cerrado: _negocioCerrado,
-      motivoCierre: _negocioCerrado ? motivo : null,
-      promocion: promo.isEmpty ? null : promo,
-      barberosNoDisponibles: Set<String>.from(_barberosNoDisponibles),
+    final aplicado = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Material(
+                color: ColoresApp.primario,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(
+                    color: ColoresApp.acento.withValues(alpha: 0.9),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Actividad especial',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: ColoresApp.secundario,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _resumenDias(diasObjetivo),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: ColoresApp.secundario.withValues(alpha: 0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      '1) Selecciona accion',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: ColoresApp.secundario,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _TipoAccionCalendario.values.map((opcion) {
+                        final seleccionado = accion == opcion;
+                        return ChoiceChip(
+                          label: Text(opcion.etiqueta),
+                          selected: seleccionado,
+                          backgroundColor: ColoresApp.primario,
+                          selectedColor: ColoresApp.acento,
+                          side: BorderSide(
+                            color: seleccionado
+                                ? ColoresApp.acento
+                                : ColoresApp.secundario.withValues(alpha: 0.5),
+                          ),
+                          labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: seleccionado
+                                ? ColoresApp.primario
+                                : ColoresApp.secundario,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          onSelected: (_) {
+                            setModalState(() {
+                              accion = opcion;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      '2) Completa datos',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: ColoresApp.secundario,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (accion == _TipoAccionCalendario.cierreNegocio)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: ColoresApp.terceario.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: ColoresApp.secundario.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Text(
+                          'Se marcara cierre de negocio para los dias seleccionados.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: ColoresApp.secundario,
+                          ),
+                        ),
+                      ),
+                    if (accion == _TipoAccionCalendario.barberosNoDisponibles)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 240),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: _barberos.map((barbero) {
+                              final activo = barberosNoDisponibles.contains(barbero);
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: () {
+                                    setModalState(() {
+                                      if (activo) {
+                                        barberosNoDisponibles.remove(barbero);
+                                      } else {
+                                        barberosNoDisponibles.add(barbero);
+                                      }
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 2),
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          value: activo,
+                                          activeColor: ColoresApp.acento,
+                                          checkColor: ColoresApp.primario,
+                                          onChanged: (valor) {
+                                            setModalState(() {
+                                              if (valor ?? false) {
+                                                barberosNoDisponibles.add(barbero);
+                                              } else {
+                                                barberosNoDisponibles.remove(barbero);
+                                              }
+                                            });
+                                          },
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            barbero,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: ColoresApp.secundario,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: ColoresApp.secundario,
+                              side: BorderSide(
+                                color: ColoresApp.secundario.withValues(alpha: 0.75),
+                              ),
+                            ),
+                            child: const Text('Cancelar'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ColoresApp.acento,
+                              foregroundColor: ColoresApp.primario,
+                            ),
+                            onPressed: () {
+                              if (accion == _TipoAccionCalendario.barberosNoDisponibles &&
+                                  barberosNoDisponibles.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Selecciona al menos un barbero no disponible.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              _aplicarActividad(
+                                dias: diasObjetivo,
+                                accion: accion,
+                                barberosNoDisponibles: barberosNoDisponibles,
+                              );
+                              Navigator.of(context).pop(true);
+                            },
+                            child: const Text('Guardar'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
 
-    setState(() {
-      for (final dia in _diasSeleccionados) {
-        _agendaPorDia[dia] = config;
-      }
-    });
-
-    final plural = _diasSeleccionados.length > 1 ? 'dias' : 'dia';
+    if (aplicado != true || !mounted) return;
+    final plural = diasObjetivo.length == 1 ? 'dia' : 'dias';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Configuracion guardada para ${_diasSeleccionados.length} $plural.')),
+      SnackBar(content: Text('Actividad aplicada a ${diasObjetivo.length} $plural.')),
     );
   }
 
-  void _limpiarConfiguracionDiasSeleccionados() {
-    if (_diasSeleccionados.isEmpty) return;
-
+  void _aplicarActividad({
+    required List<DateTime> dias,
+    required _TipoAccionCalendario accion,
+    required Set<String> barberosNoDisponibles,
+  }) {
     setState(() {
-      for (final dia in _diasSeleccionados) {
-        _agendaPorDia.remove(dia);
+      for (final dia in dias) {
+        _agendaPorDia[dia] = _ActividadEspecialDia(
+          accion: accion,
+          barberosNoDisponibles:
+              accion == _TipoAccionCalendario.barberosNoDisponibles
+                  ? Set<String>.from(barberosNoDisponibles)
+                  : <String>{},
+        );
       }
-      _negocioCerrado = false;
-      _motivoCierreCtrl.clear();
-      _promocionCtrl.clear();
-      _barberosNoDisponibles.clear();
     });
+  }
 
+  void _eliminarActividad(DateTime fecha) {
+    setState(() {
+      _agendaPorDia.remove(fecha);
+    });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Configuracion eliminada de los dias seleccionados.')),
+      SnackBar(content: Text('Actividad eliminada para ${_formatearFecha(fecha)}.')),
     );
   }
 
@@ -145,7 +328,7 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final ahora = DateTime.now();
-    final eventosOrdenados = _agendaPorDia.entries.toList()
+    final actividadesOrdenadas = _agendaPorDia.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
     return Scaffold(
@@ -158,13 +341,6 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _bloqueTitulo(
-            tema: tema,
-            titulo: 'Agenda mensual operativa',
-            subtitulo:
-                'Marca cierres por feriado, promociones y disponibilidad de barberos por fecha.',
-          ),
-          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: _decoracionTarjeta(),
@@ -180,232 +356,125 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Mes actual: ${_mesNombre(ahora.month)} ${ahora.year}. Puedes navegar entre meses y anos en el calendario.',
+                  'Selecciona una fecha inicial y otra final en el calendario para aplicar actividad especial.',
                   style: tema.textTheme.bodySmall?.copyWith(
                     color: ColoresApp.primario.withValues(alpha: 0.75),
                     height: 1.3,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Theme(
-                  data: Theme.of(context).copyWith(
-                    colorScheme: Theme.of(context).colorScheme.copyWith(
-                          primary: ColoresApp.primario,
-                          onPrimary: ColoresApp.secundario,
-                          onSurface: ColoresApp.primario,
-                          surface: ColoresApp.secundario,
-                          onSurfaceVariant: ColoresApp.primario,
-                        ),
-                    datePickerTheme: DatePickerThemeData(
-                      backgroundColor: ColoresApp.secundario,
-                      weekdayStyle: tema.textTheme.bodySmall?.copyWith(
-                        color: ColoresApp.primario,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      dayStyle: tema.textTheme.bodyMedium?.copyWith(
-                        color: ColoresApp.primario,
-                      ),
-                      yearStyle: tema.textTheme.bodyMedium?.copyWith(
-                        color: ColoresApp.primario,
-                      ),
-                      headerForegroundColor: ColoresApp.primario,
-                    ),
-                  ),
-                  child: CalendarDatePicker(
-                    initialDate: _diaActivo,
-                    firstDate: DateTime(ahora.year - 2, 1, 1),
-                    lastDate: DateTime(ahora.year + 3, 12, 31),
-                    currentDate: DateTime.now(),
-                    onDateChanged: (dia) {
-                      final normal = _normalizarFecha(dia);
-                      setState(() {
-                        _diaActivo = normal;
-                        _diasSeleccionados
-                          ..clear()
-                          ..add(normal);
-                      });
-                      _cargarConfiguracionDelDia(normal);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _seleccionarRangoDias,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ColoresApp.primario,
-                        side: BorderSide(
-                          color: ColoresApp.primario.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      icon: const Icon(Icons.date_range_outlined, size: 18),
-                      label: const Text('Seleccionar varios dias'),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: ColoresApp.terceario.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        _resumenDiasSeleccionados(),
-                        style: tema.textTheme.bodySmall?.copyWith(
-                          color: ColoresApp.primario,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: _decoracionTarjeta(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Configuracion del dia o dias',
-                  style: tema.textTheme.labelLarge?.copyWith(
-                    color: ColoresApp.primario,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    value: _negocioCerrado,
-                    activeThumbColor: ColoresApp.primario,
-                    title: Text(
-                      'Negocio cerrado por feriado o evento',
-                      style: tema.textTheme.bodyMedium?.copyWith(
-                        color: ColoresApp.primario,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Si esta activo, ese dia no se agenda citas.',
-                      style: tema.textTheme.bodySmall?.copyWith(
-                        color: ColoresApp.primario.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    onChanged: (valor) {
-                      setState(() {
-                        _negocioCerrado = valor;
-                        if (!valor) _motivoCierreCtrl.clear();
-                      });
-                    },
-                  ),
-                ),
-                if (_negocioCerrado)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: TextField(
-                      controller: _motivoCierreCtrl,
-                      maxLines: 2,
-                      style: tema.textTheme.bodyMedium?.copyWith(
-                        color: ColoresApp.primario,
-                      ),
-                      decoration: _decoracionCampo(
-                        tema,
-                        labelText: 'Motivo del cierre',
-                        hintText: 'Ejemplo: Feriado nacional o mantenimiento',
-                      ),
-                    ),
-                  ),
-                TextField(
-                  controller: _promocionCtrl,
-                  maxLines: 2,
-                  style: tema.textTheme.bodyMedium?.copyWith(
-                    color: ColoresApp.primario,
-                  ),
-                  decoration: _decoracionCampo(
-                    tema,
-                    labelText: 'Promocion del dia (opcional)',
-                    hintText: 'Ejemplo: 2x1 en corte clasico de 10:00 a 13:00',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Barberos no disponibles ese dia',
-                  style: tema.textTheme.labelMedium?.copyWith(
-                    color: ColoresApp.primario,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ..._barberos.map((barbero) {
-                  final activo = _barberosNoDisponibles.contains(barbero);
-                  return Material(
-                    color: Colors.transparent,
-                    child: CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      activeColor: ColoresApp.primario,
-                      value: activo,
-                      title: Text(
-                        barbero,
-                        style: tema.textTheme.bodyMedium?.copyWith(
-                          color: ColoresApp.primario,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Marcar si se enfermo o no estara disponible',
-                        style: tema.textTheme.bodySmall?.copyWith(
-                          color: ColoresApp.primario.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      onChanged: (valor) {
-                        setState(() {
-                          if (valor ?? false) {
-                            _barberosNoDisponibles.add(barbero);
-                          } else {
-                            _barberosNoDisponibles.remove(barbero);
-                          }
-                        });
-                      },
-                    ),
-                  );
-                }),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _guardarConfiguracion,
-                        icon: const Icon(Icons.save_outlined),
-                        label: const Text('Guardar cambios'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ColoresApp.primario,
-                          foregroundColor: ColoresApp.secundario,
-                          minimumSize: const Size.fromHeight(44),
-                        ),
-                      ),
+                TableCalendar<_ActividadEspecialDia>(
+                  firstDay: DateTime(ahora.year - 2, 1, 1),
+                  lastDay: DateTime(ahora.year + 3, 12, 31),
+                  focusedDay: _diaEnfoque,
+                  locale: 'es_ES',
+                  startingDayOfWeek: StartingDayOfWeek.monday,
+                  availableGestures: AvailableGestures.all,
+                  calendarFormat: CalendarFormat.month,
+                  rangeSelectionMode: RangeSelectionMode.toggledOn,
+                  rangeStartDay: _inicioRango,
+                  rangeEndDay: _finRango,
+                  selectedDayPredicate: (day) =>
+                      isSameDay(day, _inicioRango) && isSameDay(_inicioRango, _finRango),
+                  eventLoader: (day) {
+                    final normal = _normalizarFecha(day);
+                    final item = _agendaPorDia[normal];
+                    return item == null ? <_ActividadEspecialDia>[] : <_ActividadEspecialDia>[item];
+                  },
+                  onRangeSelected: _onRangoSeleccionado,
+                  onPageChanged: (focusedDay) {
+                    setState(() {
+                      _diaEnfoque = _normalizarFecha(focusedDay);
+                    });
+                  },
+                  calendarStyle: CalendarStyle(
+                    outsideDaysVisible: false,
+                    defaultTextStyle: tema.textTheme.bodyMedium!.copyWith(
+                      color: ColoresApp.primario,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _limpiarConfiguracionDiasSeleccionados,
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Limpiar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: ColoresApp.error,
-                          side: const BorderSide(color: ColoresApp.error),
-                          minimumSize: const Size.fromHeight(44),
-                        ),
-                      ),
+                    weekendTextStyle: tema.textTheme.bodyMedium!.copyWith(
+                      color: ColoresApp.primario,
                     ),
-                  ],
+                    todayDecoration: BoxDecoration(
+                      color: ColoresApp.terceario.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    rangeStartDecoration: const BoxDecoration(
+                      color: ColoresApp.primario,
+                      shape: BoxShape.circle,
+                    ),
+                    rangeEndDecoration: const BoxDecoration(
+                      color: ColoresApp.primario,
+                      shape: BoxShape.circle,
+                    ),
+                    withinRangeDecoration: BoxDecoration(
+                      color: ColoresApp.acento.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                    ),
+                    rangeHighlightColor: ColoresApp.acento.withValues(alpha: 0.18),
+                    markerDecoration: const BoxDecoration(
+                      color: ColoresApp.acento,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  headerStyle: HeaderStyle(
+                    titleCentered: true,
+                    formatButtonVisible: false,
+                    titleTextStyle: tema.textTheme.titleMedium!.copyWith(
+                      color: ColoresApp.primario,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    leftChevronIcon: const Icon(
+                      Icons.chevron_left,
+                      color: ColoresApp.primario,
+                    ),
+                    rightChevronIcon: const Icon(
+                      Icons.chevron_right,
+                      color: ColoresApp.primario,
+                    ),
+                  ),
+                  daysOfWeekStyle: DaysOfWeekStyle(
+                    weekdayStyle: tema.textTheme.bodySmall!.copyWith(
+                      color: ColoresApp.primario,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    weekendStyle: tema.textTheme.bodySmall!.copyWith(
+                      color: ColoresApp.primario,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  calendarBuilders: CalendarBuilders<_ActividadEspecialDia>(
+                    markerBuilder: (context, day, events) {
+                      if (events.isEmpty) return const SizedBox.shrink();
+                      final actividad = events.first;
+                      return Positioned(
+                        bottom: 6,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _colorActividad(actividad.accion),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: ColoresApp.terceario.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _resumenDias(_diasSeleccionados),
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: ColoresApp.primario,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -418,70 +487,88 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Agenda guardada',
+                  'Actividades especiales',
                   style: tema.textTheme.labelLarge?.copyWith(
                     color: ColoresApp.primario,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (eventosOrdenados.isEmpty)
+                if (actividadesOrdenadas.isEmpty)
                   Text(
-                    'Aun no hay configuraciones guardadas en el calendario.',
+                    'Aun no hay actividades especiales registradas.',
                     style: tema.textTheme.bodySmall?.copyWith(
                       color: ColoresApp.primario.withValues(alpha: 0.75),
                     ),
                   )
                 else
-                  ...eventosOrdenados.map((entrada) {
+                  ...actividadesOrdenadas.map((entrada) {
                     final fecha = entrada.key;
-                    final item = entrada.value;
+                    final actividad = entrada.value;
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: ColoresApp.terceario.withValues(alpha: 0.34),
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _colorActividad(actividad.accion).withValues(alpha: 0.65),
+                        ),
                       ),
-                      child: Column(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _formatearFecha(fecha),
-                            style: tema.textTheme.labelLarge?.copyWith(
-                              color: ColoresApp.primario,
-                              fontWeight: FontWeight.w800,
+                          Container(
+                            width: 10,
+                            height: 10,
+                            margin: const EdgeInsets.only(top: 6),
+                            decoration: BoxDecoration(
+                              color: _colorActividad(actividad.accion),
+                              shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          if (item.cerrado)
-                            Text(
-                              'Cierre: ${item.motivoCierre ?? 'Sin detalle'}',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: ColoresApp.primario,
-                              ),
-                            )
-                          else
-                            Text(
-                              'Negocio abierto',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: ColoresApp.primario,
-                              ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _formatearFecha(fecha),
+                                  style: tema.textTheme.labelLarge?.copyWith(
+                                    color: ColoresApp.primario,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  actividad.accion.etiqueta,
+                                  style: tema.textTheme.bodyMedium?.copyWith(
+                                    color: ColoresApp.primario,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (actividad.barberosNoDisponibles.isNotEmpty)
+                                  Text(
+                                    'No disponibles: ${actividad.barberosNoDisponibles.join(', ')}',
+                                    style: tema.textTheme.bodySmall?.copyWith(
+                                      color: ColoresApp.primario,
+                                    ),
+                                  ),
+                              ],
                             ),
-                          if ((item.promocion ?? '').isNotEmpty)
-                            Text(
-                              'Promocion: ${item.promocion}',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: ColoresApp.primario,
-                              ),
-                            ),
-                          if (item.barberosNoDisponibles.isNotEmpty)
-                            Text(
-                              'No disponibles: ${item.barberosNoDisponibles.join(', ')}',
-                              style: tema.textTheme.bodySmall?.copyWith(
-                                color: ColoresApp.primario,
-                              ),
-                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Editar',
+                            onPressed: () => _abrirModalAccionDias(diaEdicion: fecha),
+                            icon: const Icon(Icons.edit_outlined),
+                            color: ColoresApp.primario,
+                          ),
+                          IconButton(
+                            tooltip: 'Eliminar',
+                            onPressed: () => _eliminarActividad(fecha),
+                            icon: const Icon(Icons.delete_outline),
+                            color: ColoresApp.error,
+                          ),
                         ],
                       ),
                     );
@@ -494,6 +581,15 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
     );
   }
 
+  Color _colorActividad(_TipoAccionCalendario accion) {
+    switch (accion) {
+      case _TipoAccionCalendario.cierreNegocio:
+        return ColoresApp.error;
+      case _TipoAccionCalendario.barberosNoDisponibles:
+        return ColoresApp.advertencia;
+    }
+  }
+
   BoxDecoration _decoracionTarjeta() {
     return BoxDecoration(
       color: ColoresApp.secundario,
@@ -502,81 +598,13 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
     );
   }
 
-  Widget _bloqueTitulo({
-    required ThemeData tema,
-    required String titulo,
-    required String subtitulo,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: ColoresApp.primario,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            titulo,
-            style: tema.textTheme.titleMedium?.copyWith(
-              color: ColoresApp.secundario,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitulo,
-            style: tema.textTheme.bodySmall?.copyWith(
-              color: ColoresApp.secundario.withValues(alpha: 0.88),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _decoracionCampo(
-    ThemeData tema, {
-    required String labelText,
-    required String hintText,
-  }) {
-    return InputDecoration(
-      labelText: labelText,
-      hintText: hintText,
-      labelStyle: tema.textTheme.bodySmall?.copyWith(
-        color: ColoresApp.primario.withValues(alpha: 0.85),
-      ),
-      hintStyle: tema.textTheme.bodySmall?.copyWith(
-        color: ColoresApp.primario.withValues(alpha: 0.55),
-      ),
-      filled: true,
-      fillColor: ColoresApp.secundario,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: ColoresApp.primario.withValues(alpha: 0.35),
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: ColoresApp.primario.withValues(alpha: 0.85),
-          width: 1.4,
-        ),
-      ),
-    );
-  }
-
-  String _resumenDiasSeleccionados() {
-    if (_diasSeleccionados.isEmpty) return 'Sin dias seleccionados';
-    if (_diasSeleccionados.length == 1) {
-      return '1 dia: ${_formatearFecha(_diasSeleccionados.first)}';
+  String _resumenDias(List<DateTime> dias) {
+    if (dias.isEmpty) return 'Sin dias seleccionados';
+    if (dias.length == 1) {
+      return '1 dia: ${_formatearFecha(dias.first)}';
     }
-    final ordenados = _diasSeleccionados.toList()..sort();
-    return '${_diasSeleccionados.length} dias: ${_formatearFecha(ordenados.first)} - ${_formatearFecha(ordenados.last)}';
+    final ordenados = dias.toList()..sort();
+    return '${dias.length} dias: ${_formatearFecha(ordenados.first)} - ${_formatearFecha(ordenados.last)}';
   }
 
   String _formatearFecha(DateTime fecha) {
@@ -585,39 +613,33 @@ class _PaginaCalendarioNegocioState extends State<PaginaCalendarioNegocio> {
     return '$dia/$mes/${fecha.year}';
   }
 
-  String _mesNombre(int mes) {
-    const nombres = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-    return nombres[mes - 1];
-  }
-
   static DateTime _normalizarFecha(DateTime fecha) {
     return DateTime(fecha.year, fecha.month, fecha.day);
   }
 }
 
-class _ConfiguracionDiaNegocio {
-  const _ConfiguracionDiaNegocio({
-    required this.cerrado,
-    required this.motivoCierre,
-    required this.promocion,
+class _ActividadEspecialDia {
+  const _ActividadEspecialDia({
+    required this.accion,
     required this.barberosNoDisponibles,
   });
 
-  final bool cerrado;
-  final String? motivoCierre;
-  final String? promocion;
+  final _TipoAccionCalendario accion;
   final Set<String> barberosNoDisponibles;
+}
+
+enum _TipoAccionCalendario {
+  cierreNegocio,
+  barberosNoDisponibles,
+}
+
+extension _TipoAccionCalendarioX on _TipoAccionCalendario {
+  String get etiqueta {
+    switch (this) {
+      case _TipoAccionCalendario.cierreNegocio:
+        return 'Cierre de negocio';
+      case _TipoAccionCalendario.barberosNoDisponibles:
+        return 'Barberos no disponibles';
+    }
+  }
 }

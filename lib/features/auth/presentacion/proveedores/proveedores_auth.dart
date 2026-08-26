@@ -14,6 +14,10 @@ import '../../dominio/casos_de_uso/caso_uso_completar_perfil.dart';
 import '../modelos_vista/estado_auth.dart';
 import '../modelos_vista/viewmodel_auth.dart';
 
+final GoogleSignIn _googleSignInInstancia = kIsWeb
+  ? GoogleSignIn(clientId: ConfiguracionApp.googleClientIdWeb)
+  : GoogleSignIn();
+
 // Fuente de datos local (mock)
 final fuenteAuthLocalProvider = Provider<FuenteDatosAuthLocal>((ref) {
   return FuenteDatosAuthLocalImpl();
@@ -21,14 +25,10 @@ final fuenteAuthLocalProvider = Provider<FuenteDatosAuthLocal>((ref) {
 
 // Repositorio
 final repositorioAuthProvider = Provider<RepositorioAuth>((ref) {
-  final googleSignIn = kIsWeb
-      ? GoogleSignIn(clientId: ConfiguracionApp.googleClientIdWeb)
-      : GoogleSignIn();
-
   return RepositorioAuthImpl(
     fuenteLocal: ref.watch(fuenteAuthLocalProvider),
     almacenamiento: ref.watch(almacenamientoSeguroProvider),
-    googleSignIn: googleSignIn,
+    googleSignIn: _googleSignInInstancia,
   );
 });
 

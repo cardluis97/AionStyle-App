@@ -1,7 +1,7 @@
 name: aionstyle_movil
 description: AionStyle - Aplicación móvil para gestión de barberías y citas.
 publish_to: 'none'
-version: 1.0.4+11
+version: 1.0.4+13
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -51,6 +51,7 @@ dependencies:
   lottie: ^3.1.2
   package_info_plus: ^10.2.0
   geolocator: ^13.0.2
+  table_calendar: ^3.1.2
 
 dev_dependencies:
   flutter_test:

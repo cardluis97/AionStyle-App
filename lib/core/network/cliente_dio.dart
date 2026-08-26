@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import '../../app/config/configuracion_app.dart';
 import 'interceptores/interceptor_auth.dart';
 import 'interceptores/interceptor_errores.dart';
-import 'interceptores/interceptor_logs.dart';
 
 /// Instancia singleton de Dio configurada para AionStyle API.
 class ClienteDio {
@@ -24,7 +23,6 @@ class ClienteDio {
     dio.interceptors.addAll([
       interceptorAuth,
       InterceptorErrores(),
-      InterceptorLogs(),
     ]);
 
     return dio;

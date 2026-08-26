@@ -15,10 +15,10 @@ class PaginaReporteVentas extends StatelessWidget {
       const _ClienteFiel(nombre: 'Andrea Ruiz', visitas: 6, totalGastado: 1490),
     ];
     final serviciosTop = <_ItemTop>[
-      const _ItemTop(nombre: 'Corte clasico', cantidad: 42),
-      const _ItemTop(nombre: 'Fade / Degradado', cantidad: 36),
-      const _ItemTop(nombre: 'Perfilado de barba', cantidad: 28),
-      const _ItemTop(nombre: 'Lavado capilar', cantidad: 21),
+      const _ItemTop(nombre: 'Corte Cabello', cantidad: 42),
+      const _ItemTop(nombre: 'Barba', cantidad: 36),
+      const _ItemTop(nombre: 'cejas', cantidad: 28),
+      const _ItemTop(nombre: 'Tratamientos', cantidad: 21),
     ];
     final estilosTop = <_ItemTop>[
       const _ItemTop(nombre: 'Low Fade', cantidad: 31),
