@@ -14,6 +14,8 @@ import '../../dominio/casos_de_uso/caso_uso_completar_perfil.dart';
 import '../modelos_vista/estado_auth.dart';
 import '../modelos_vista/viewmodel_auth.dart';
 
+export '../modelos_vista/estado_auth.dart';
+
 final GoogleSignIn _googleSignInInstancia = kIsWeb
   ? GoogleSignIn(clientId: ConfiguracionApp.googleClientIdWeb)
   : GoogleSignIn();

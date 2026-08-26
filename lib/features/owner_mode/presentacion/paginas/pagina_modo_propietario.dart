@@ -31,7 +31,6 @@ class _PaginaModoPropietarioState
   final _departamento = TextEditingController();
   final _municipio = TextEditingController();
   final _colonia = TextEditingController();
-  final _direccion = TextEditingController();
   final _cuenta = TextEditingController();
   final _nombreDueno = TextEditingController();
   final _emailDueno = TextEditingController();
@@ -97,7 +96,7 @@ class _PaginaModoPropietarioState
   void dispose() {
     for (final controlador in [
       _nombreNegocio, _telefonoNegocio, _departamento,
-      _municipio, _colonia, _direccion, _cuenta,
+      _municipio, _colonia, _cuenta,
       _nombreDueno, _emailDueno, _celularDueno, _dniDueno,
     ]) {
       controlador.dispose();
@@ -122,7 +121,6 @@ class _PaginaModoPropietarioState
     _departamento.text = 'Francisco Morazan';
     _municipio.text = 'Distrito Central';
     _colonia.text = 'Colonia Palmira';
-    _direccion.text = 'Boulevard Morazan, local 12';
     _cuenta.text = 'BAC 001-778899-22';
     _cantidadSucursales = 2;
     _codigoPaisNegocio = '+504';
@@ -174,6 +172,10 @@ class _PaginaModoPropietarioState
     persona.correo.text = 'jose.aguilar@aionstyle.com';
     persona.dni.text = '0801199912345';
     persona.serviciosSeleccionados = {'Corte clasico', 'Fade / Degradado'};
+    persona.minutosPorServicio['Corte clasico'] =
+      TextEditingController(text: '30');
+    persona.minutosPorServicio['Fade / Degradado'] =
+      TextEditingController(text: '45');
     persona.diasTrabajo = {'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'};
     persona.horaEntrada = const TimeOfDay(hour: 9, minute: 0);
     persona.horaSalida = const TimeOfDay(hour: 18, minute: 0);
@@ -405,8 +407,7 @@ class _PaginaModoPropietarioState
         _esTextoValido(_telefonoNegocio) &&
         _esTextoValido(_departamento) &&
         _esTextoValido(_municipio) &&
-      _esTextoValido(_colonia) &&
-        _esTextoValido(_direccion) &&
+        _esTextoValido(_colonia) &&
         _tipoNegocio != null &&
         _validarHorarios();
   }
@@ -437,6 +438,14 @@ class _PaginaModoPropietarioState
       }
       if ((persona.serviciosSeleccionados ?? const <String>{}).isEmpty) {
         return false;
+      }
+      for (final servicio in persona.serviciosSeleccionados ?? const <String>{}) {
+        final minutosTexto =
+            persona.minutosPorServicio[servicio]?.text.trim() ?? '';
+        final minutos = int.tryParse(minutosTexto);
+        if (minutos == null || minutos <= 0 || minutos > 600) {
+          return false;
+        }
       }
       final diasTrabajo = (persona.diasTrabajo ?? const <String>{});
       if (diasTrabajo.isEmpty) return false;
@@ -490,13 +499,10 @@ class _PaginaModoPropietarioState
 
   String get _ubicacionNegocioVistaPrevia {
     final colonia = _colonia.text.trim();
-    final direccion = _direccion.text.trim();
-    if (colonia.isEmpty && direccion.isEmpty) {
-      return 'Colonia y direccion exacta';
+    if (colonia.isEmpty) {
+      return 'Colonia';
     }
-    if (colonia.isEmpty) return direccion;
-    if (direccion.isEmpty) return colonia;
-    return '$colonia, $direccion';
+    return colonia;
   }
 
   String _resumirDiasConsecutivos(List<String> dias) {
@@ -725,7 +731,7 @@ class _PaginaModoPropietarioState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Revisa personal: experiencia 1-80, servicios, dias, horario dentro del negocio y foto.',
+            'Revisa personal: experiencia 1-80, servicios con minutos, dias, horario dentro del negocio y foto.',
           ),
         ),
       );
@@ -932,12 +938,6 @@ class _PaginaModoPropietarioState
                     'Colonia',
                     _colonia,
                     icono: Icons.place_outlined,
-                  ),
-                  _campoAcordeon(
-                    'Direccion exacta del negocio',
-                    _direccion,
-                    maxLineas: 2,
-                    icono: Icons.location_on_outlined,
                   ),
                   _campoAcordeon(
                     'Cuenta bancaria (opcional)',
@@ -2017,11 +2017,66 @@ class _PaginaModoPropietarioState
                         servicios.add(servicio);
                       } else {
                         servicios.remove(servicio);
+                        final controlador =
+                            persona.minutosPorServicio.remove(servicio);
+                        controlador?.dispose();
                       }
                     });
                   },
                 );
               }).toList(),
+            ),
+          if ((persona.serviciosSeleccionados ?? const <String>{}).isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Duracion por servicio (minutos)',
+                    style: tema.textTheme.labelMedium?.copyWith(
+                      color: ColoresApp.secundario,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...((persona.serviciosSeleccionados ?? const <String>{}).toList()
+                      ..sort())
+                    .map((servicio) {
+                  final controladorMinutos =
+                      persona.minutosPorServicio.putIfAbsent(
+                    servicio,
+                    () => TextEditingController(),
+                  );
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: TextFormField(
+                      controller: controladorMinutos,
+                      keyboardType: TextInputType.number,
+                      style: _textoClaro(tema),
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (valor) {
+                        final minutos = int.tryParse((valor ?? '').trim());
+                        if (minutos == null) {
+                          return 'Ingresa minutos validos para $servicio';
+                        }
+                        if (minutos <= 0 || minutos > 600) {
+                          return 'Minutos entre 1 y 600 para $servicio';
+                        }
+                        return null;
+                      },
+                      decoration: _decoracionAcordeon(
+                        tema,
+                        etiqueta: '$servicio (min)',
+                        hintTexto: 'Ejemplo: 30',
+                        icono: Icons.schedule_outlined,
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
           const SizedBox(height: 10),
           Align(
@@ -2285,6 +2340,14 @@ class _PaginaModoPropietarioState
                     final serviciosPersona =
                         (persona.serviciosSeleccionados ?? const <String>{}).toList()
                           ..sort();
+                    final serviciosConMinutos = serviciosPersona
+                        .map((servicio) {
+                          final minutos =
+                              persona.minutosPorServicio[servicio]?.text.trim() ?? '';
+                          if (minutos.isEmpty) return servicio;
+                          return '$servicio ($minutos min)';
+                        })
+                        .toList();
                     final horario = persona.horaEntrada != null &&
                             persona.horaSalida != null
                         ? '${_formatearHora12h(persona.horaEntrada!)} - ${_formatearHora12h(persona.horaSalida!)}'
@@ -2364,9 +2427,9 @@ class _PaginaModoPropietarioState
                                   ),
                                 ),
                                 Text(
-                                  serviciosPersona.isEmpty
+                                  serviciosConMinutos.isEmpty
                                       ? 'Servicios: pendientes'
-                                      : 'Servicios: ${serviciosPersona.take(2).join(' • ')}',
+                                    : 'Servicios: ${serviciosConMinutos.take(2).join(' • ')}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: tema.textTheme.bodySmall?.copyWith(
@@ -2623,6 +2686,7 @@ class _PersonalFormulario {
   final experiencia = TextEditingController();
   final correo = TextEditingController();
   final dni = TextEditingController();
+  final Map<String, TextEditingController> minutosPorServicio = {};
 
   Set<String>? serviciosSeleccionados = <String>{};
   Set<String>? diasTrabajo = <String>{};
@@ -2636,6 +2700,9 @@ class _PersonalFormulario {
     experiencia.dispose();
     correo.dispose();
     dni.dispose();
+    for (final controlador in minutosPorServicio.values) {
+      controlador.dispose();
+    }
   }
 }
 

@@ -5,7 +5,7 @@ part 'cita_modelo.freezed.dart';
 part 'cita_modelo.g.dart';
 
 @freezed
-class CitaModelo with _$CitaModelo {
+abstract class CitaModelo with _$CitaModelo {
   const factory CitaModelo({
     required String id,
     @JsonKey(name: 'usuario_id') required String usuarioId,

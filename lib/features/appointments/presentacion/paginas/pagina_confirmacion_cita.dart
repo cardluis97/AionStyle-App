@@ -18,7 +18,8 @@ class PaginaConfirmacionCita extends ConsumerStatefulWidget {
     required this.servicios,
     required this.precio,
     required this.fecha,
-    required this.hora,
+    required this.horaInicio,
+    required this.horaFinal,
     required this.metodoPago,
     required this.codigoQr,
   });
@@ -29,7 +30,8 @@ class PaginaConfirmacionCita extends ConsumerStatefulWidget {
   final String servicios;
   final double precio;
   final String fecha;
-  final String hora;
+  final String horaInicio;
+  final String horaFinal;
   final String metodoPago;
   final String codigoQr;
 
@@ -42,7 +44,7 @@ class _PaginaConfirmacionCitaState extends ConsumerState<PaginaConfirmacionCita>
   int _segundos = 15;
 
   String get _rutaCitasConDatos {
-    return '${Rutas.citas}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(widget.corte)}&servicios=${Uri.encodeComponent(widget.servicios)}&precio=${widget.precio.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(widget.fecha)}&hora=${Uri.encodeComponent(widget.hora)}&pago=${Uri.encodeComponent(widget.metodoPago)}&qr=${Uri.encodeComponent(widget.codigoQr)}';
+    return '${Rutas.citas}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(widget.corte)}&servicios=${Uri.encodeComponent(widget.servicios)}&precio=${widget.precio.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(widget.fecha)}&hora=${Uri.encodeComponent(widget.horaInicio)}&horaInicio=${Uri.encodeComponent(widget.horaInicio)}&horaFin=${Uri.encodeComponent(widget.horaFinal)}&pago=${Uri.encodeComponent(widget.metodoPago)}&qr=${Uri.encodeComponent(widget.codigoQr)}';
   }
 
   @override
@@ -90,7 +92,8 @@ class _PaginaConfirmacionCitaState extends ConsumerState<PaginaConfirmacionCita>
             servicios: widget.servicios,
             precio: widget.precio,
             fecha: widget.fecha,
-            hora: widget.hora,
+            horaInicio: widget.horaInicio,
+            horaFinal: widget.horaFinal,
             metodoPago: widget.metodoPago,
             codigoQr: widget.codigoQr,
           ),

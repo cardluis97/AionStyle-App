@@ -20,6 +20,11 @@ class PaginaPerfil extends ConsumerWidget {
     );
     final tieneRolBarbero = usuario?.esBarbero == true;
     final tieneRolDueno = usuario?.esDueno == true;
+    final etiquetaRol = tieneRolDueno
+        ? 'Dueño'
+        : tieneRolBarbero
+        ? 'Barbero/Estilista'
+        : 'Cliente';
 
     return Scaffold(
       backgroundColor: ColoresApp.fondo,
@@ -81,9 +86,9 @@ class PaginaPerfil extends ConsumerWidget {
                                         .withValues(alpha: 0.75),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
-                                  child: const Text(
-                                    'Cliente',
-                                    style: TextStyle(
+                                  child: Text(
+                                    etiquetaRol,
+                                    style: const TextStyle(
                                       color: ColoresApp.primario,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -142,15 +147,15 @@ class PaginaPerfil extends ConsumerWidget {
                 items: [
                   _ItemPerfil(
                     titulo: tieneRolBarbero
-                        ? 'INGRESAR COMO CLIENTE'
+                        ? 'INGRESAR COMO BARBERO / ESTILISTA'
                         : 'INGRESAR COMO BARBERO',
                     subtitulo: tieneRolBarbero
-                        ? 'Cambia al flujo de cliente'
+                        ? 'Abre tu panel de trabajo, citas y QR'
                         : 'Activa el modo de trabajo de barbero',
                     icono: Icons.content_cut_rounded,
                     onTap: () {
                       if (tieneRolBarbero) {
-                        context.go(Rutas.inicio);
+                        context.pushNamed(Rutas.nombreQr);
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,26 +168,14 @@ class PaginaPerfil extends ConsumerWidget {
                     },
                   ),
                   _ItemPerfil(
-                    titulo: tieneRolBarbero
+                    titulo: tieneRolDueno
                         ? 'INGRESAR COMO DUEÑO BARBERIA'
-                        : tieneRolDueno
-                        ? 'INGRESAR COMO CLIENTE'
                         : 'INGRESAR COMO DUEÑO BARBERIA',
-                    subtitulo: tieneRolBarbero
+                    subtitulo: tieneRolDueno
                         ? 'Gestiona tu negocio y sucursales'
-                        : tieneRolDueno
-                        ? 'Cambia al flujo de cliente'
-                        : 'Gestiona tu negocio y sucursales',
+                        : 'Completa el alta de negocio y habilita tu rol dueño',
                     icono: Icons.storefront_outlined,
                     onTap: () {
-                      if (tieneRolBarbero) {
-                        context.pushNamed(Rutas.nombreModoPropietario);
-                        return;
-                      }
-                      if (tieneRolDueno) {
-                        context.go(Rutas.inicio);
-                        return;
-                      }
                       context.pushNamed(Rutas.nombreModoPropietario);
                     },
                   ),

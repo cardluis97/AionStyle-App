@@ -13,9 +13,12 @@ class FacturaCitaWidget extends StatelessWidget {
     this.servicios,
     required this.precio,
     required this.fecha,
-    required this.hora,
+    required this.horaInicio,
+    required this.horaFinal,
     required this.metodoPago,
     required this.codigoQr,
+    this.mostrarQr = true,
+    this.accionesInferiores,
   });
 
   final String clienteNombre;
@@ -25,9 +28,12 @@ class FacturaCitaWidget extends StatelessWidget {
   final String? servicios;
   final double precio;
   final String fecha;
-  final String hora;
+  final String horaInicio;
+  final String horaFinal;
   final String metodoPago;
   final String codigoQr;
+  final bool mostrarQr;
+  final Widget? accionesInferiores;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +83,8 @@ class FacturaCitaWidget extends StatelessWidget {
             _linea('Servicios', servicios!),
           _linea('Corte', corte),
           _linea('Fecha', fecha),
-          _linea('Hora', hora),
+          _linea('Hora de inicio', horaInicio),
+          _linea('Hora final', horaFinal),
           _linea('Pago', metodoPago),
           const SizedBox(height: 8),
           Row(
@@ -91,7 +98,7 @@ class FacturaCitaWidget extends StatelessWidget {
                 ),
               ),
               Text(
-                'USD ${precio.toStringAsFixed(2)}',
+                'Lps ${precio.toStringAsFixed(2)}',
                 style: tema.textTheme.titleSmall?.copyWith(
                   color: ColoresApp.primario,
                   fontWeight: FontWeight.w800,
@@ -99,30 +106,36 @@ class FacturaCitaWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: ColoresApp.secundario,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: ColoresApp.terceario.withValues(alpha: 0.2)),
-              ),
-              child: QrImageView(
-                data: codigoQr,
-                size: 190,
-                eyeStyle: const QrEyeStyle(
-                  color: ColoresApp.primario,
-                  eyeShape: QrEyeShape.square,
+          if (mostrarQr) ...[
+            const SizedBox(height: 14),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: ColoresApp.secundario,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: ColoresApp.terceario.withValues(alpha: 0.2)),
                 ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  color: ColoresApp.primario,
-                  dataModuleShape: QrDataModuleShape.square,
+                child: QrImageView(
+                  data: codigoQr,
+                  size: 190,
+                  eyeStyle: const QrEyeStyle(
+                    color: ColoresApp.primario,
+                    eyeShape: QrEyeShape.square,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    color: ColoresApp.primario,
+                    dataModuleShape: QrDataModuleShape.square,
+                  ),
+                  backgroundColor: ColoresApp.secundario,
                 ),
-                backgroundColor: ColoresApp.secundario,
               ),
             ),
-          ),
+          ],
+          if (accionesInferiores != null) ...[
+            const SizedBox(height: 14),
+            accionesInferiores!,
+          ],
         ],
       ),
     );

@@ -8,7 +8,7 @@ part 'usuario_modelo.freezed.dart';
 part 'usuario_modelo.g.dart';
 
 @freezed
-class UsuarioModelo with _$UsuarioModelo {
+abstract class UsuarioModelo with _$UsuarioModelo {
   const factory UsuarioModelo({
     required String id,
     @JsonKey(name: 'nombre_completo') required String nombreCompleto,

@@ -6,8 +6,8 @@ part of 'usuario_modelo.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$UsuarioModeloImpl _$$UsuarioModeloImplFromJson(Map<String, dynamic> json) =>
-    _$UsuarioModeloImpl(
+_UsuarioModelo _$UsuarioModeloFromJson(Map<String, dynamic> json) =>
+    _UsuarioModelo(
       id: json['id'] as String,
       nombreCompleto: json['nombre_completo'] as String,
       correo: json['correo'] as String,
@@ -15,15 +15,14 @@ _$UsuarioModeloImpl _$$UsuarioModeloImplFromJson(Map<String, dynamic> json) =>
       tipoDocumento: json['tipo_documento'] as String,
       numeroDocumento: json['numero_documento'] as String,
       imagenPerfil: json['imagen_perfil'] as String?,
-      roles: (json['roles'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const ['CLIENTE'],
+      roles:
+          (json['roles'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              const ['CLIENTE'],
       proveedorAutenticacion:
           json['proveedor_autenticacion'] as String? ?? 'CORREO',
     );
 
-Map<String, dynamic> _$$UsuarioModeloImplToJson(_$UsuarioModeloImpl instance) =>
+Map<String, dynamic> _$UsuarioModeloToJson(_UsuarioModelo instance) =>
     <String, dynamic>{
       'id': instance.id,
       'nombre_completo': instance.nombreCompleto,

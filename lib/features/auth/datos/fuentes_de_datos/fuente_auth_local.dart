@@ -109,9 +109,9 @@ class FuenteDatosAuthLocalImpl implements FuenteDatosAuthLocal {
     if (clave == 'usuariob@aionstyle.com') {
       return usuarioBase.copyWith(
         id: 'usr_demo_b',
-        nombreCompleto: 'Usuario B',
+        nombreCompleto: 'Barbero Empleado B',
         correo: clave,
-        roles: const ['CLIENTE', 'BARBERO'],
+        roles: const ['BARBERO'],
       );
     }
     if (clave == 'usuarioc@aionstyle.com') {

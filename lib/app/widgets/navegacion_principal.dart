@@ -18,6 +18,11 @@ class NavegacionPrincipal extends ConsumerWidget {
       perfilIncompleto: (usuario) => usuario.esDueno,
       orElse: () => false,
     );
+    final esBarberoEmpleado = estadoAuth.maybeWhen(
+      autenticado: (usuario) => usuario.esBarbero && !usuario.esDueno,
+      perfilIncompleto: (usuario) => usuario.esBarbero && !usuario.esDueno,
+      orElse: () => false,
+    );
 
     final destinos = esDueno
         ? <NavigationDestination>[
@@ -35,6 +40,19 @@ class NavegacionPrincipal extends ConsumerWidget {
               icon: Icon(Icons.bar_chart_outlined),
               selectedIcon: Icon(Icons.bar_chart),
               label: 'Reportes',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Mi perfil',
+            ),
+          ]
+        : esBarberoEmpleado
+        ? <NavigationDestination>[
+            const NavigationDestination(
+              icon: Icon(Icons.content_cut_outlined),
+              selectedIcon: Icon(Icons.content_cut),
+              label: 'Pendientes',
             ),
             const NavigationDestination(
               icon: Icon(Icons.person_outline),
@@ -63,19 +81,23 @@ class NavegacionPrincipal extends ConsumerWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _indiceActual(context, esDueno),
-        onDestinationSelected: (index) => _navegar(context, index, esDueno),
+        selectedIndex: _indiceActual(context, esDueno, esBarberoEmpleado),
+        onDestinationSelected: (index) => _navegar(context, index, esDueno, esBarberoEmpleado),
         destinations: destinos,
       ),
     );
   }
 
-  int _indiceActual(BuildContext context, bool esDueno) {
+  int _indiceActual(BuildContext context, bool esDueno, bool esBarberoEmpleado) {
     final ubicacion = GoRouterState.of(context).uri.path;
     if (esDueno) {
       if (ubicacion.startsWith(Rutas.calendarioNegocio)) return 1;
       if (ubicacion.startsWith(Rutas.reporteVentas)) return 2;
       if (ubicacion.startsWith(Rutas.perfil)) return 3;
+      return 0;
+    }
+    if (esBarberoEmpleado) {
+      if (ubicacion.startsWith(Rutas.perfil)) return 1;
       return 0;
     }
     if (ubicacion.startsWith(Rutas.citas)) return 1;
@@ -84,7 +106,7 @@ class NavegacionPrincipal extends ConsumerWidget {
     return 0;
   }
 
-  void _navegar(BuildContext context, int index, bool esDueno) {
+  void _navegar(BuildContext context, int index, bool esDueno, bool esBarberoEmpleado) {
     final rutas = esDueno
         ? <String>[
             Rutas.miNegocio,
@@ -92,10 +114,16 @@ class NavegacionPrincipal extends ConsumerWidget {
             Rutas.reporteVentas,
             Rutas.perfil,
           ]
+        : esBarberoEmpleado
+        ? <String>[Rutas.qr, Rutas.perfil]
         : <String>[Rutas.inicio, Rutas.citas, Rutas.perfil];
 
     if (index < 0 || index >= rutas.length) {
-      context.go(esDueno ? Rutas.miNegocio : Rutas.inicio);
+      if (esDueno) {
+        context.go(Rutas.miNegocio);
+        return;
+      }
+      context.go(esBarberoEmpleado ? Rutas.qr : Rutas.inicio);
       return;
     }
 

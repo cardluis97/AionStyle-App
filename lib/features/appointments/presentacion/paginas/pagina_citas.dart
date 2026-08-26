@@ -18,6 +18,8 @@ class PaginaCitas extends ConsumerStatefulWidget {
     this.precio,
     this.fecha,
     this.hora,
+    this.horaInicio,
+    this.horaFin,
     this.metodoPago,
     this.codigoQr,
   });
@@ -29,6 +31,8 @@ class PaginaCitas extends ConsumerStatefulWidget {
   final double? precio;
   final String? fecha;
   final String? hora;
+  final String? horaInicio;
+  final String? horaFin;
   final String? metodoPago;
   final String? codigoQr;
 
@@ -45,7 +49,7 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         widget.corte != null &&
         widget.precio != null &&
         widget.fecha != null &&
-        widget.hora != null &&
+          (widget.horaInicio != null || widget.hora != null) &&
         widget.metodoPago != null &&
         widget.codigoQr != null;
   }
@@ -151,7 +155,8 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
           servicios: widget.servicios,
           precio: widget.precio!,
           fecha: widget.fecha!,
-          hora: widget.hora!,
+          horaInicio: widget.horaInicio ?? widget.hora!,
+          horaFin: widget.horaFin ?? 'Pendiente',
           metodoPago: widget.metodoPago!,
           codigoQr: widget.codigoQr!,
           imagenUrl: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=120&q=60',
@@ -164,9 +169,10 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         servicios: 'Corte clasico',
         precio: 18,
         fecha: '22/08/2026',
-        hora: '10:30',
+        horaInicio: '10:30 AM',
+        horaFin: '11:05 AM',
         metodoPago: 'Efectivo',
-        codigoQr: 'AIONSTYLE|DEMO|CENTRAL|CARLOS|FADE|22/08/2026|10:30|18.00',
+        codigoQr: 'AIONSTYLE|DEMO|CENTRAL|CARLOS|FADE|22/08/2026|10:30 AM|11:05 AM|35|18.00',
         imagenUrl: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=120&q=60',
         estado: EstadoCitaVista.pendiente,
       ),
@@ -177,9 +183,10 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         servicios: 'Diseno de barba',
         precio: 24,
         fecha: '25/08/2026',
-        hora: '16:00',
+        horaInicio: '4:00 PM',
+        horaFin: '4:50 PM',
         metodoPago: 'Visa',
-        codigoQr: 'AIONSTYLE|DEMO|ECLIPSE|ANDREA|PERFILADO|25/08/2026|16:00|24.00',
+        codigoQr: 'AIONSTYLE|DEMO|ECLIPSE|ANDREA|PERFILADO|25/08/2026|4:00 PM|4:50 PM|50|24.00',
         imagenUrl: 'https://images.unsplash.com/photo-1519415510236-718bdfcd89c8?auto=format&fit=crop&w=120&q=60',
         estado: EstadoCitaVista.cancelada,
       ),
@@ -190,9 +197,10 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
         servicios: 'Corte ejecutivo | Perfilado de barba',
         precio: 21,
         fecha: '11/08/2026',
-        hora: '12:00',
+        horaInicio: '12:00 PM',
+        horaFin: '12:55 PM',
         metodoPago: 'Efectivo',
-        codigoQr: 'AIONSTYLE|DEMO|NORTE|LUIS|CORTEYBARBA|11/08/2026|12:00|21.00',
+        codigoQr: 'AIONSTYLE|DEMO|NORTE|LUIS|CORTEYBARBA|11/08/2026|12:00 PM|12:55 PM|55|21.00',
         imagenUrl: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=120&q=60',
         estado: EstadoCitaVista.finalizada,
       ),
@@ -263,7 +271,8 @@ class _PaginaCitasState extends ConsumerState<PaginaCitas> {
                     servicios: cita.servicios,
                     precio: cita.precio,
                     fecha: cita.fecha,
-                    hora: cita.hora,
+                    horaInicio: cita.horaInicio,
+                    horaFinal: cita.horaFin,
                     metodoPago: cita.metodoPago,
                     codigoQr: cita.codigoQr,
                   ),
@@ -423,7 +432,7 @@ class _TarjetaCita extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Fecha: ${cita.fecha}  ${cita.hora}',
+                      'Fecha: ${cita.fecha}  ${cita.horaInicio} - ${cita.horaFin}',
                       style: tema.textTheme.bodySmall?.copyWith(
                         color: ColoresApp.textoClaro,
                       ),
@@ -439,7 +448,7 @@ class _TarjetaCita extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                'USD ${cita.precio.toStringAsFixed(2)}',
+                'Lps ${cita.precio.toStringAsFixed(2)}',
                 style: tema.textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: ColoresApp.primario,
@@ -534,7 +543,8 @@ class _CitaVista {
     this.servicios,
     required this.precio,
     required this.fecha,
-    required this.hora,
+    required this.horaInicio,
+    required this.horaFin,
     required this.metodoPago,
     required this.codigoQr,
     required this.imagenUrl,
@@ -547,7 +557,8 @@ class _CitaVista {
   final String? servicios;
   final double precio;
   final String fecha;
-  final String hora;
+  final String horaInicio;
+  final String horaFin;
   final String metodoPago;
   final String codigoQr;
   final String imagenUrl;

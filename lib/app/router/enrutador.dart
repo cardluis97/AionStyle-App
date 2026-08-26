@@ -117,6 +117,8 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
                 precio: double.tryParse(p['precio'] ?? ''),
                 fecha: p['fecha'],
                 hora: p['hora'],
+                horaInicio: p['horaInicio'],
+                horaFin: p['horaFin'],
                 metodoPago: p['pago'],
                 codigoQr: p['qr'],
               );
@@ -157,7 +159,8 @@ final enrutadorProvider = Provider<GoRouter>((ref) {
                 servicios: p['servicios'] ?? '',
                 precio: precio,
                 fecha: p['fecha'] ?? 'Sin fecha',
-                hora: p['hora'] ?? 'Sin hora',
+                horaInicio: p['horaInicio'] ?? p['hora'] ?? 'Sin hora',
+                horaFinal: p['horaFin'] ?? 'Sin hora final',
                 metodoPago: p['pago'] ?? 'Efectivo',
                 codigoQr: p['qr'] ?? 'AIONSTYLE|SIN_QR',
               );

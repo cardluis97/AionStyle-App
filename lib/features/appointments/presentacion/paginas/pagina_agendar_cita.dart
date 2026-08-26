@@ -42,7 +42,7 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
   DateTime? _fechaSeleccionada;
   TimeOfDay? _horaSeleccionada;
   MetodoPagoCita _metodoPago = MetodoPagoCita.efectivo;
-  String? _estiloSeleccionado;
+  final Map<String, String> _estiloSeleccionadoPorServicio = {};
   final Set<String> _serviciosSeleccionados = <String>{};
   int? _indiceTarjetaSeleccionada = 0;
   bool _mostrarFormularioTarjeta = false;
@@ -58,8 +58,16 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
 
     bool get _serviciosCompletos => _serviciosSeleccionados.isNotEmpty;
 
-    bool get _estiloCompleto =>
-      _estiloSeleccionado != null && _estiloSeleccionado!.isNotEmpty;
+    bool get _estiloCompleto {
+      if (_serviciosSeleccionados.isEmpty) return false;
+      for (final servicio in _serviciosSeleccionados) {
+        final estilo = _estiloSeleccionadoPorServicio[servicio];
+        if (estilo == null || estilo.trim().isEmpty) {
+          return false;
+        }
+      }
+      return true;
+    }
 
   bool get _fechaCompleta => _fechaSeleccionada != null;
 
@@ -112,30 +120,44 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
     return mapa;
   }
 
-  List<String> get _estilosFiltrados {
-    if (_serviciosSeleccionados.isEmpty) {
-      return const <String>[];
-    }
-    final estilos = <String>{};
-    for (final servicio in _serviciosSeleccionados) {
-      estilos.addAll(_estilosPorServicio[servicio] ?? const <String>[]);
-    }
-    final lista = estilos.toList()..sort();
+  List<String> _estilosParaServicio(String servicio) {
+    final lista = List<String>.from(_estilosPorServicio[servicio] ?? const <String>[])
+      ..sort();
     return lista;
   }
 
-  Map<String, double> get _estilosConPrecio {
-    final mapa = <String, double>{};
-    for (var i = 0; i < widget.estilosDisponibles.length; i++) {
-      final estilo = widget.estilosDisponibles[i];
-      mapa[estilo] = 12 + (i * 4.5);
-    }
-    return mapa;
+  double _precioServicioEstilo(String servicio, String estilo) {
+    final firmaServicio = servicio.runes.fold<int>(0, (a, b) => a + b);
+    final firmaEstilo = estilo.runes.fold<int>(0, (a, b) => a + b);
+    final base = 70 + (firmaServicio % 7) * 10;
+    final extra = (firmaEstilo % 5) * 10;
+    return (base + extra).toDouble();
   }
 
   double get _precioSeleccionado {
-    if (_estiloSeleccionado == null) return 0;
-    return _estilosConPrecio[_estiloSeleccionado] ?? 0;
+    var total = 0.0;
+    for (final servicio in _serviciosSeleccionados) {
+      final estilo = _estiloSeleccionadoPorServicio[servicio];
+      if (estilo == null || estilo.isEmpty) continue;
+      total += _precioServicioEstilo(servicio, estilo);
+    }
+    return total;
+  }
+
+  String get _estilosResumen {
+    if (_serviciosSeleccionados.isEmpty) return 'Pendiente';
+    final partes = <String>[];
+    final servicios = _serviciosSeleccionados.toList()..sort();
+    for (final servicio in servicios) {
+      final estilo = _estiloSeleccionadoPorServicio[servicio];
+      if (estilo == null || estilo.isEmpty) {
+        partes.add('$servicio: Pendiente');
+      } else {
+        final precio = _precioServicioEstilo(servicio, estilo);
+        partes.add('$servicio: $estilo (Lps ${precio.toStringAsFixed(2)})');
+      }
+    }
+    return partes.join(' | ');
   }
 
   String get _fechaTexto {
@@ -146,6 +168,35 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
   String get _horaTexto {
     if (_horaSeleccionada == null) return 'Pendiente';
     return _formatearHora12(_horaSeleccionada!);
+  }
+
+  int? get _duracionEstimadaMinutos {
+    if (!_estiloCompleto) return null;
+    var total = 0;
+    for (final servicio in _serviciosSeleccionados) {
+      final estilo = _estiloSeleccionadoPorServicio[servicio];
+      if (estilo == null || estilo.isEmpty) continue;
+      final indiceEstilo = widget.estilosDisponibles
+          .indexWhere((item) => item.toLowerCase() == estilo.toLowerCase());
+      final base = indiceEstilo < 0 ? 25 : 20 + ((indiceEstilo % 6) * 5);
+      total += base;
+    }
+    final firmaBarbero = widget.barberoNombre.runes.fold<int>(0, (a, b) => a + b);
+    final ajusteBarbero = (firmaBarbero % 4) * 5;
+    return (total + ajusteBarbero).clamp(15, 300).toInt();
+  }
+
+  TimeOfDay _sumarMinutosHora(TimeOfDay hora, int minutos) {
+    final totalMinutos = (hora.hour * 60 + hora.minute + minutos) % (24 * 60);
+    return TimeOfDay(hour: totalMinutos ~/ 60, minute: totalMinutos % 60);
+  }
+
+  String get _horaFinalTexto {
+    if (_horaSeleccionada == null) return 'Pendiente';
+    final duracion = _duracionEstimadaMinutos;
+    if (duracion == null) return 'Pendiente';
+    final horaFinal = _sumarMinutosHora(_horaSeleccionada!, duracion);
+    return _formatearHora12(horaFinal);
   }
 
   String _formatearHora12(TimeOfDay hora) {
@@ -308,9 +359,9 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
       return;
     }
 
-    if (_estiloSeleccionado == null) {
+    if (!_estiloCompleto) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona el estilo del cliente.')),
+        const SnackBar(content: Text('Selecciona estilo para cada servicio.')),
       );
       return;
     }
@@ -326,11 +377,16 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
 
     final marca = DateTime.now().millisecondsSinceEpoch.toString();
     final serviciosTexto = _serviciosSeleccionados.toList()..sort();
+    final horaInicio = _horaTexto;
+    final horaFinal = _horaFinalTexto;
+    final estilosTexto = serviciosTexto
+        .map((servicio) => _estiloSeleccionadoPorServicio[servicio] ?? 'Pendiente')
+        .join(' | ');
     final codigoQr =
-        'AIONSTYLE|$marca|${widget.negocioNombre}|${widget.barberoNombre}|${serviciosTexto.join(', ')}|${_estiloSeleccionado!}|$_fechaTexto|$_horaTexto|${_precioSeleccionado.toStringAsFixed(2)}';
+        'AIONSTYLE|$marca|${widget.negocioNombre}|${widget.barberoNombre}|${serviciosTexto.join(', ')}|$estilosTexto|$_fechaTexto|$horaInicio|$horaFinal|${_precioSeleccionado.toStringAsFixed(2)}';
 
     context.pushReplacement(
-      '${Rutas.confirmacionCita}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(_estiloSeleccionado!)}&servicios=${Uri.encodeComponent(serviciosTexto.join(' | '))}&precio=${_precioSeleccionado.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(_fechaTexto)}&hora=${Uri.encodeComponent(_horaTexto)}&pago=${Uri.encodeComponent(_metodoPagoTexto)}&qr=${Uri.encodeComponent(codigoQr)}',
+      '${Rutas.confirmacionCita}?negocio=${Uri.encodeComponent(widget.negocioNombre)}&barbero=${Uri.encodeComponent(widget.barberoNombre)}&corte=${Uri.encodeComponent(estilosTexto)}&servicios=${Uri.encodeComponent(_estilosResumen)}&precio=${_precioSeleccionado.toStringAsFixed(2)}&fecha=${Uri.encodeComponent(_fechaTexto)}&hora=${Uri.encodeComponent(horaInicio)}&horaInicio=${Uri.encodeComponent(horaInicio)}&horaFin=${Uri.encodeComponent(horaFinal)}&pago=${Uri.encodeComponent(_metodoPagoTexto)}&qr=${Uri.encodeComponent(codigoQr)}',
     );
   }
 
@@ -473,10 +529,7 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
                                 _serviciosSeleccionados.add(servicio);
                               } else {
                                 _serviciosSeleccionados.remove(servicio);
-                              }
-                              if (_estiloSeleccionado != null &&
-                                  !_estilosFiltrados.contains(_estiloSeleccionado)) {
-                                _estiloSeleccionado = null;
+                                _estiloSeleccionadoPorServicio.remove(servicio);
                               }
                             });
                           },
@@ -485,97 +538,92 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
                     ),
                   const SizedBox(height: 12),
                   Text(
-                    'Estilo disponible segun servicio seleccionado',
+                    'Estilo por cada servicio seleccionado',
                     style: tema.textTheme.bodySmall?.copyWith(
                       color: ColoresApp.secundario,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: _estiloSeleccionado,
-                    isExpanded: true,
-                    onTap: _serviciosSeleccionados.isEmpty
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Selecciona primero uno o varios servicios.'),
+                  if (_serviciosSeleccionados.isEmpty)
+                    Text(
+                      'Primero selecciona uno o varios servicios.',
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: ColoresApp.secundario.withValues(alpha: 0.8),
+                      ),
+                    )
+                  else
+                    ...(_serviciosSeleccionados.toList()..sort()).map((servicio) {
+                      final estilosServicio = _estilosParaServicio(servicio);
+                      final estiloActual = _estiloSeleccionadoPorServicio[servicio];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: estiloActual,
+                          isExpanded: true,
+                          style: tema.textTheme.bodyMedium?.copyWith(
+                            color: ColoresApp.secundario,
+                          ),
+                          dropdownColor: ColoresApp.primario,
+                          iconEnabledColor: ColoresApp.secundario,
+                          decoration: InputDecoration(
+                            labelText: 'Estilo para $servicio',
+                            filled: true,
+                            fillColor: ColoresApp.secundario.withValues(alpha: 0.10),
+                            labelStyle: tema.textTheme.bodySmall?.copyWith(
+                              color: ColoresApp.secundario.withValues(alpha: 0.82),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: ColoresApp.secundario.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: ColoresApp.secundario.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: ColoresApp.secundario.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ),
+                          items: estilosServicio.map((estilo) {
+                            final precio = _precioServicioEstilo(servicio, estilo);
+                            return DropdownMenuItem<String>(
+                              value: estilo,
+                              child: Text(
+                                '$estilo - Lps ${precio.toStringAsFixed(2)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             );
-                          }
-                        : null,
-                    style: tema.textTheme.bodyMedium?.copyWith(
-                      color: ColoresApp.secundario,
-                    ),
-                    dropdownColor: ColoresApp.primario,
-                    iconEnabledColor: ColoresApp.secundario,
-                    decoration: InputDecoration(
-                      hintText: _serviciosSeleccionados.isEmpty
-                          ? 'Primero selecciona servicio'
-                          : 'Selecciona un estilo',
-                      filled: true,
-                      fillColor: ColoresApp.secundario.withValues(alpha: 0.10),
-                      hintStyle: tema.textTheme.bodySmall?.copyWith(
-                        color: ColoresApp.secundario.withValues(alpha: 0.72),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: ColoresApp.secundario.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: ColoresApp.secundario.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: ColoresApp.secundario.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ),
-                    items: _estilosFiltrados.map((estilo) {
-                      final precio = _estilosConPrecio[estilo] ?? 0;
-                      return DropdownMenuItem<String>(
-                        value: estilo,
-                        child: Text(
-                          '$estilo - USD ${precio.toStringAsFixed(2)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          }).toList(),
+                          onChanged: (valor) {
+                            setState(() {
+                              if (valor == null || valor.isEmpty) {
+                                _estiloSeleccionadoPorServicio.remove(servicio);
+                              } else {
+                                _estiloSeleccionadoPorServicio[servicio] = valor;
+                              }
+                            });
+                          },
+                          validator: (valor) {
+                            if (!_serviciosSeleccionados.contains(servicio)) {
+                              return null;
+                            }
+                            if (valor == null || valor.isEmpty) {
+                              return 'Selecciona estilo para $servicio';
+                            }
+                            return null;
+                          },
                         ),
                       );
-                    }).toList(),
-                    selectedItemBuilder: (context) {
-                      return _estilosFiltrados.map((estilo) {
-                        final precio = _estilosConPrecio[estilo] ?? 0;
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '$estilo - USD ${precio.toStringAsFixed(2)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList();
-                    },
-                    onChanged: (valor) {
-                      setState(() {
-                        _estiloSeleccionado = valor;
-                      });
-                    },
-                    validator: (valor) {
-                      if (_serviciosSeleccionados.isEmpty) {
-                        return 'Selecciona al menos un servicio';
-                      }
-                      if (valor == null || valor.isEmpty) {
-                        return 'Selecciona un estilo';
-                      }
-                      return null;
-                    },
-                  ),
+                    }),
                 ],
               ),
             ),
@@ -997,15 +1045,16 @@ class _PaginaAgendarCitaState extends State<PaginaAgendarCita> {
                         ? 'Pendiente'
                         : (_serviciosSeleccionados.toList()..sort()).join(', '),
                   ),
-                  _filaResumen('Estilo', _estiloSeleccionado ?? 'Pendiente'),
+                  _filaResumen('Estilo(s)', _estilosResumen),
                   _filaResumen(
                     'Precio',
-                    _estiloSeleccionado == null
+                    !_estiloCompleto
                         ? 'Pendiente'
-                        : 'USD ${_precioSeleccionado.toStringAsFixed(2)}',
+                        : 'Lps ${_precioSeleccionado.toStringAsFixed(2)}',
                   ),
                   _filaResumen('Fecha', _fechaTexto),
-                  _filaResumen('Hora', _horaTexto),
+                  _filaResumen('Hora de inicio', _horaTexto),
+                  _filaResumen('Hora final', _horaFinalTexto),
                   _filaResumen('Pago', _metodoPagoTexto),
                 ],
               ),

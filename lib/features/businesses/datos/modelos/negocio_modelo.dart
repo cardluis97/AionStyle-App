@@ -5,7 +5,7 @@ part 'negocio_modelo.freezed.dart';
 part 'negocio_modelo.g.dart';
 
 @freezed
-class NegocioModelo with _$NegocioModelo {
+abstract class NegocioModelo with _$NegocioModelo {
   const factory NegocioModelo({
     required String id,
     required String nombre,

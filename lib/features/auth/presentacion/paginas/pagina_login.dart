@@ -81,6 +81,10 @@ class _PaginaLoginState extends ConsumerState<PaginaLogin> {
           final permitido = await exigirUbicacionAntesDeInicio(context);
           if (!mounted) return;
           if (permitido) {
+            if (usuario.esBarbero && !usuario.esDueno) {
+              context.go(Rutas.qr);
+              return;
+            }
             context.go(usuario.esDueno ? Rutas.miNegocio : Rutas.inicio);
           }
           _redirigiendoInicio = false;
