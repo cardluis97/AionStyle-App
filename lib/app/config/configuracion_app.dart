@@ -2,8 +2,16 @@
 /// Cambia entre ambientes modificando [entorno].
 abstract class ConfiguracionApp {
   static const entorno = _Entorno.desarrollo;
+  static const urlBaseDesdeEntorno = String.fromEnvironment(
+    'URL_BASE_BACKEND',
+    defaultValue: '',
+  );
 
   static String get urlBase {
+    if (urlBaseDesdeEntorno.isNotEmpty) {
+      return urlBaseDesdeEntorno;
+    }
+
     switch (entorno) {
       case _Entorno.desarrollo:
         return 'https://api-dev.aionstyle.com/v1';

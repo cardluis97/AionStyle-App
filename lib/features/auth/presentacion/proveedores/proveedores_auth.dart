@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../../../app/config/configuracion_app.dart';
 import '../../../../core/providers/proveedores_core.dart';
 import '../../datos/fuentes_de_datos/fuente_auth_local.dart';
+import '../../datos/fuentes_de_datos/fuente_auth_remota.dart';
 import '../../datos/repositorios/repositorio_auth_impl.dart';
 import '../../dominio/repositorios/repositorio_auth.dart';
 import '../../dominio/casos_de_uso/caso_uso_iniciar_sesion.dart';
@@ -25,10 +26,16 @@ final fuenteAuthLocalProvider = Provider<FuenteDatosAuthLocal>((ref) {
   return FuenteDatosAuthLocalImpl();
 });
 
+// Fuente de datos remota (backend)
+final fuenteAuthRemotaProvider = Provider<FuenteDatosAuthRemota>((ref) {
+  return FuenteDatosAuthRemotaImpl(ref.watch(dioProvider));
+});
+
 // Repositorio
 final repositorioAuthProvider = Provider<RepositorioAuth>((ref) {
   return RepositorioAuthImpl(
     fuenteLocal: ref.watch(fuenteAuthLocalProvider),
+    fuenteRemota: ref.watch(fuenteAuthRemotaProvider),
     almacenamiento: ref.watch(almacenamientoSeguroProvider),
     googleSignIn: _googleSignInInstancia,
   );

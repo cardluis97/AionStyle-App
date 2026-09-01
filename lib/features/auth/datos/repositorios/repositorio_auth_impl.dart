@@ -9,16 +9,19 @@ import '../../dominio/entidades/usuario_entidad.dart';
 import '../../dominio/entidades/tipo_documento.dart';
 import '../../dominio/repositorios/repositorio_auth.dart';
 import '../fuentes_de_datos/fuente_auth_local.dart';
+import '../fuentes_de_datos/fuente_auth_remota.dart';
 import '../modelos/usuario_modelo.dart';
 
 class RepositorioAuthImpl implements RepositorioAuth {
   const RepositorioAuthImpl({
     required this.fuenteLocal,
+    required this.fuenteRemota,
     required this.almacenamiento,
     required this.googleSignIn,
   });
 
   final FuenteDatosAuthLocal fuenteLocal;
+  final FuenteDatosAuthRemota fuenteRemota;
   final AlmacenamientoSeguro almacenamiento;
   final GoogleSignIn googleSignIn;
 
@@ -73,7 +76,7 @@ class RepositorioAuthImpl implements RepositorioAuth {
     required String contrasena,
   }) async {
     try {
-      final modelo = await fuenteLocal.registrar(
+      final modelo = await fuenteRemota.registrarse(
         nombreCompleto: nombreCompleto,
         tipoDocumento: tipoDocumento.nombre,
         numeroDocumento: numeroDocumento,

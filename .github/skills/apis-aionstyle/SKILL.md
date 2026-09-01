@@ -157,3 +157,43 @@ El repositorio implementación (`datos/repositorios/`) toma el `cuerpo` y mapea 
 - [ ] `estado` es un String (no número)
 - [ ] El archivo está declarado en `pubspec.yaml` bajo `assets:`
 - [ ] Existe la fuente de datos correspondiente en `datos/fuentes_de_datos/`
+
+---
+
+## Plantilla de contrato (usar como guía)
+
+Este archivo es una referencia de formato y convenciones.
+No se deben documentar aquí todos los endpoints literales del proyecto.
+
+Reglas:
+- Solo `POST`.
+- Mantener el envoltorio estándar en respuestas.
+- Dejar `cuerpo` al final cuando se use el formato con `error` explícito.
+
+Plantilla de respuesta exitosa:
+
+```json
+{
+  "estatus": "200",
+  "fecha_consumo": "2026-01-01T00:00:00Z",
+  "error": null,
+  "cuerpo": {
+    "data": {}
+  }
+}
+```
+
+Plantilla de respuesta con error:
+
+```json
+{
+  "estatus": "400",
+  "fecha_consumo": "2026-01-01T00:00:00Z",
+  "error": {
+    "codigo": "VALIDACION",
+    "mensaje": "Mensaje de error",
+    "detalles": {}
+  },
+  "cuerpo": {}
+}
+```

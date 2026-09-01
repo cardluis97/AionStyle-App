@@ -10,6 +10,9 @@ enum RolUsuario {
       };
 
   static RolUsuario desdeTexto(String texto) => switch (texto.toUpperCase()) {
+      '1' => RolUsuario.cliente,
+      '2' => RolUsuario.barbero,
+      '3' => RolUsuario.dueno,
         'CLIENTE' => RolUsuario.cliente,
         'BARBERO' => RolUsuario.barbero,
         'DUEÑO' || 'DUENO' => RolUsuario.dueno,
